@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Sparkles, Cpu, HardDrive, Compass, Info, FileText, CheckCircle2, Users, Globe } from "lucide-react";
+import { Sparkles, Cpu, Compass, FileText, Users, Globe } from "lucide-react";
 import CardInput from "./components/CardInput";
 import ComparisonInput from "./components/ComparisonInput";
 import ComparisonView from "./components/ComparisonView";
@@ -303,7 +303,9 @@ ${char.description}`).join("\n\n------\n\n");
     customApiKey: string | null,
     selectedModel: string | null,
     provider: string,
-    customBaseUrl: string | null = null
+    customBaseUrl: string | null = null,
+    thinkingMode: boolean = false,
+    reasoningEffort: string = "medium"
   ) => {
     setIsLoading(true);
     setError(null);
@@ -325,6 +327,8 @@ ${char.description}`).join("\n\n------\n\n");
           selectedModel,
           provider,
           customBaseUrl,
+          thinkingMode,
+          reasoningEffort,
         }),
       });
 
@@ -348,7 +352,10 @@ ${char.description}`).join("\n\n------\n\n");
     customApiKey: string | null,
     selectedModel: string | null,
     provider: string,
-    customBaseUrl: string | null = null
+    customBaseUrl: string | null = null,
+    analyzerNotes: string | null = null,
+    thinkingMode: boolean = false,
+    reasoningEffort: string = "medium"
   ) => {
     setIsLoading(true);
     setError(null);
@@ -370,6 +377,8 @@ ${char.description}`).join("\n\n------\n\n");
           selectedModel,
           provider,
           customBaseUrl,
+          thinkingMode,
+          reasoningEffort,
         }),
       });
 
@@ -794,7 +803,7 @@ ${char.description}`).join("\n\n------\n\n");
                           </h3>
                         </div>
 
-                        <div className="border border-[#1A1A1A] bg-[#0A0A0A] p-5 rounded-xl whitespace-pro-wrap leading-relaxed text-xs text-zinc-300 font-mono">
+                        <div className="border border-[#1A1A1A] bg-[#0A0A0A] p-5 rounded-xl whitespace-pre-wrap leading-relaxed text-xs text-zinc-300 font-mono">
                           {analysis.criticalAssessment}
                         </div>
                       </div>

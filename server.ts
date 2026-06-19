@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import { safeParseJSON } from "./src/utils";
@@ -44,6 +44,78 @@ function sanitizeModel(model: string | null | undefined, provider: string): stri
     }
   }
   return m;
+}
+
+// Spread-able Gemini thinking config. Returns {} when thinking is off so it
+// can be inlined into the generateContent config object.
+function geminiThinkingConfig(thinkingMode: boolean, reasoningEffort: string) {
+  if (!thinkingMode) return {};
+  const level =
+    reasoningEffort === "low" ? ThinkingLevel.LOW :
+    reasoningEffort === "medium" ? ThinkingLevel.MEDIUM :
+    ThinkingLevel.HIGH;
+  return { thinkingConfig: { thinkingLevel: level } };
+}
+
+function providerLabel(provider: string): string {
+  if (provider === "openai") return "OpenAI";
+  if (provider === "custom") return "Custom";
+  return "OpenRouter";
+}
+
+function buildChatCompletionsUrl(provider: string, customBaseUrl?: string): string {
+  if (provider === "custom" && customBaseUrl) {
+    return customBaseUrl.endsWith("/chat/completions")
+      ? customBaseUrl
+      : customBaseUrl.replace(/\/$/, "") + "/chat/completions";
+  }
+  if (provider === "openai") return "https://api.openai.com/v1/chat/completions";
+  return "https://openrouter.ai/api/v1/chat/completions";
+}
+
+// Shared call path for any OpenAI-compatible endpoint (OpenRouter, OpenAI, custom).
+// Returns the raw assistant message string for the caller to JSON-parse.
+async function callOpenAICompatible(opts: {
+  req: express.Request;
+  apiKey: string;
+  provider: string;
+  model: string;
+  messages: any[];
+  title: string;
+  thinkingMode: boolean;
+  reasoningEffort: string;
+}): Promise<string> {
+  const { req, apiKey, provider, model, messages, title, thinkingMode, reasoningEffort } = opts;
+  const apiUrl = buildChatCompletionsUrl(provider, req.body.customBaseUrl);
+
+  const orResponse = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": (req.headers.referer || req.headers.origin || "https://ai.studio") as string,
+      "X-Title": title,
+      "X-Forwarded-For": (req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "").toString()
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      ...(provider === "openai" && { response_format: { type: "json_object" } }),
+      ...(thinkingMode && { reasoning_effort: reasoningEffort }),
+      max_tokens: 8192
+    })
+  });
+
+  if (!orResponse.ok) {
+    const errText = await orResponse.text().catch(() => orResponse.statusText);
+    if (orResponse.status === 429) {
+      throw new Error("Rate limit exceeded (429). The AI provider is overloaded or out of quota. Please try again later or switch models.");
+    }
+    throw new Error(`${providerLabel(provider)} API error: ${orResponse.status} - ${errText}`);
+  }
+
+  const orJson: any = await orResponse.json();
+  return orJson.choices?.[0]?.message?.content || "{}";
 }
 
 const app = express();
@@ -189,40 +261,11 @@ ${analyzerNotes}
         }
       ];
 
-      const apiUrl = provider === "custom" && req.body.customBaseUrl ? (req.body.customBaseUrl.endsWith("/chat/completions") ? req.body.customBaseUrl : req.body.customBaseUrl.replace(/\/$/, "") + "/chat/completions") : provider === "openai" ? "https://api.openai.com/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
-
-      const orResponse = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${keyToUse}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": req.headers.referer || req.headers.origin || "https://ai.studio",
-          "X-Title": "LoreSieve Character Audit",
-          "X-Forwarded-For": (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || "").toString()
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages,
-          ...(provider === "openai" && { response_format: { type: "json_object" } }),
-          ...(thinkingMode && { reasoning_effort: reasoningEffort }),
-          max_tokens: 8192
-        })
+      const rawContent = await callOpenAICompatible({
+        req, apiKey: keyToUse, provider, model: modelToUse, messages,
+        title: "LoreSieve Character Audit", thinkingMode, reasoningEffort
       });
-
-      if (!orResponse.ok) {
-        const errText = await orResponse.text().catch(() => orResponse.statusText);
-        let errorMsg = `${provider === "openai" ? "OpenAI" : provider === "custom" ? "Custom" : "OpenRouter"} API error: ${orResponse.status} - ${errText}`;
-        if (orResponse.status === 429) {
-          errorMsg = `Rate limit exceeded (429). The AI provider is overloaded or out of quota. Please try again later or switch models.`;
-        }
-        throw new Error(errorMsg);
-      }
-
-      const orJson: any = await orResponse.json();
-      const rawContent = orJson.choices?.[0]?.message?.content || "{}";
-      
-      const parsedData = safeParseJSON(rawContent);
-      return res.json(parsedData);
+      return res.json(safeParseJSON(rawContent));
     }
 
     // DIRECT GEMINI INTEGRATION
@@ -267,11 +310,7 @@ ${analyzerNotes}
       contents: { parts },
       config: {
         maxOutputTokens: 8192,
-        ...(thinkingMode && {
-          thinkingConfig: {
-            thinkingLevel: reasoningEffort === "low" ? "LOW" : reasoningEffort === "medium" ? "MEDIUM" : "HIGH"
-          }
-        }),
+        ...geminiThinkingConfig(thinkingMode, reasoningEffort),
         systemInstruction,
         responseMimeType: "application/json",
         responseSchema: {
@@ -677,40 +716,11 @@ ${remakeDescription}
         }
       ];
 
-      const apiUrl = provider === "custom" && req.body.customBaseUrl ? (req.body.customBaseUrl.endsWith("/chat/completions") ? req.body.customBaseUrl : req.body.customBaseUrl.replace(/\/$/, "") + "/chat/completions") : provider === "openai" ? "https://api.openai.com/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
-
-      const orResponse = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${keyToUse}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": req.headers.referer || req.headers.origin || "https://ai.studio",
-          "X-Title": "LoreSieve Character Combat Compare",
-          "X-Forwarded-For": (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || "").toString()
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages,
-          ...(provider === "openai" && { response_format: { type: "json_object" } }),
-          ...(thinkingMode && { reasoning_effort: reasoningEffort }),
-          max_tokens: 8192
-        })
+      const rawContent = await callOpenAICompatible({
+        req, apiKey: keyToUse, provider, model: modelToUse, messages,
+        title: "LoreSieve Character Combat Compare", thinkingMode, reasoningEffort
       });
-
-      if (!orResponse.ok) {
-        const errText = await orResponse.text().catch(() => orResponse.statusText);
-        let errorMsg = `${provider === "openai" ? "OpenAI" : "OpenRouter"} API error: ${orResponse.status} - ${errText}`;
-        if (orResponse.status === 429) {
-          errorMsg = `Rate limit exceeded (429). The AI provider is overloaded or out of quota. Please try again later or switch models.`;
-        }
-        throw new Error(errorMsg);
-      }
-
-      const orJson: any = await orResponse.json();
-      const rawContent = orJson.choices?.[0]?.message?.content || "{}";
-      
-      const parsedData = safeParseJSON(rawContent);
-      return res.json(parsedData);
+      return res.json(safeParseJSON(rawContent));
     }
 
     // DIRECT GEMINI INTEGRATION
@@ -768,11 +778,7 @@ ${remakeDescription}
       contents: { parts },
       config: {
         maxOutputTokens: 8192,
-        ...(thinkingMode && {
-          thinkingConfig: {
-            thinkingLevel: reasoningEffort === "low" ? "LOW" : reasoningEffort === "medium" ? "MEDIUM" : "HIGH"
-          }
-        }),
+        ...geminiThinkingConfig(thinkingMode, reasoningEffort),
         systemInstruction,
         responseMimeType: "application/json",
         responseSchema: {
@@ -840,7 +846,9 @@ app.post("/api/group", async (req, res) => {
     characters, // Array<{name, description}>
     customApiKey,
     selectedModel,
-    provider
+    provider,
+    thinkingMode = false,
+    reasoningEffort = "medium"
   } = req.body;
 
   if (!characters || characters.length < 2) {
@@ -898,37 +906,10 @@ ${char.description}`).join("\n\n------\n\n");
         }
       ];
 
-      const apiUrl = provider === "custom" && req.body.customBaseUrl ? (req.body.customBaseUrl.endsWith("/chat/completions") ? req.body.customBaseUrl : req.body.customBaseUrl.replace(/\/$/, "") + "/chat/completions") : provider === "openai" ? "https://api.openai.com/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
-
-      const orResponse = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": req.headers.referer || req.headers.origin || "https://ai.studio",
-          "X-Title": "LoreSieve Group Audit",
-          "X-Forwarded-For": (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || "").toString()
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages,
-          ...(provider === "openai" && { response_format: { type: "json_object" } }),
-          ...(thinkingMode && { reasoning_effort: reasoningEffort }),
-          max_tokens: 8192
-        })
+      rawJsonResponse = await callOpenAICompatible({
+        req, apiKey, provider, model: modelToUse, messages,
+        title: "LoreSieve Group Audit", thinkingMode, reasoningEffort
       });
-
-      if (!orResponse.ok) {
-        const errText = await orResponse.text().catch(() => orResponse.statusText);
-        let errorMsg = `${provider === "openai" ? "OpenAI" : "OpenRouter"} API error: ${orResponse.status} - ${errText}`;
-        if (orResponse.status === 429) {
-          errorMsg = `Rate limit exceeded (429). The AI provider is overloaded or out of quota. Please try again later or switch models.`;
-        }
-        throw new Error(errorMsg);
-      }
-
-      const orData = await orResponse.json();
-      rawJsonResponse = orData.choices[0]?.message?.content || "{}";
     } else {
       const ai = new GoogleGenAI({ apiKey });
       
@@ -937,11 +918,7 @@ ${char.description}`).join("\n\n------\n\n");
         contents: userInstructions,
         config: {
           maxOutputTokens: 8192,
-        ...(thinkingMode && {
-          thinkingConfig: {
-            thinkingLevel: reasoningEffort === "low" ? "LOW" : reasoningEffort === "medium" ? "MEDIUM" : "HIGH"
-          }
-        }),
+        ...geminiThinkingConfig(thinkingMode, reasoningEffort),
           systemInstruction,
           responseMimeType: "application/json",
           responseSchema: {
@@ -1060,38 +1037,10 @@ app.post("/api/multichar", async (req, res) => {
         }
       ];
 
-      const apiUrl = provider === "custom" && req.body.customBaseUrl ? (req.body.customBaseUrl.endsWith("/chat/completions") ? req.body.customBaseUrl : req.body.customBaseUrl.replace(/\/$/, "") + "/chat/completions") : provider === "openai" ? "https://api.openai.com/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
-
-      const orResponse = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${keyToUse}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": req.headers.referer || req.headers.origin || "https://ai.studio",
-          "X-Title": "LoreSieve Multi-Char Audit",
-          "X-Forwarded-For": (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || "").toString()
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages,
-          ...(provider === "openai" && { response_format: { type: "json_object" } }),
-          ...(thinkingMode && { reasoning_effort: reasoningEffort }),
-          max_tokens: 8192
-        })
+      rawJsonResponse = await callOpenAICompatible({
+        req, apiKey: keyToUse, provider, model: modelToUse, messages,
+        title: "LoreSieve Multi-Char Audit", thinkingMode, reasoningEffort
       });
-
-      if (!orResponse.ok) {
-        const errText = await orResponse.text().catch(() => orResponse.statusText);
-        let errorMsg = `${provider === "openai" ? "OpenAI" : "OpenRouter"} API error: ${orResponse.status} - ${errText}`;
-        if (orResponse.status === 429) {
-          errorMsg = `Rate limit exceeded (429). The AI provider is overloaded or out of quota. Please try again later or switch models.`;
-        }
-        throw new Error(errorMsg);
-      }
-
-      const orData = await orResponse.json();
-      rawJsonResponse = orData.choices[0]?.message?.content || "{}";
-
     } else {
       const ai = new GoogleGenAI({ apiKey: keyToUse });
       
@@ -1100,11 +1049,7 @@ app.post("/api/multichar", async (req, res) => {
         contents: `MULTI-CHARACTER CARD DATA TO ANALYZE:\n\n${description}`,
         config: {
           maxOutputTokens: 8192,
-        ...(thinkingMode && {
-          thinkingConfig: {
-            thinkingLevel: reasoningEffort === "low" ? "LOW" : reasoningEffort === "medium" ? "MEDIUM" : "HIGH"
-          }
-        }),
+        ...geminiThinkingConfig(thinkingMode, reasoningEffort),
           systemInstruction,
           responseMimeType: "application/json",
           responseSchema: {

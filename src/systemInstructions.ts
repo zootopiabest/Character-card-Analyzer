@@ -383,6 +383,11 @@ CRITICAL COMPARISON DIRECTIVE REGARDING EPHEMERAL DATA:
 If the original character relied on "Example Dialogue" or "Greetings" to convey major traits, running gags, lore, or key behaviors, and the remake DELETED those fields but successfully integrated the traits into the persistent profile (Description/Personality) —— THIS IS A MASSIVE IMPROVEMENT, NOT A REGRESSION. 
 Ephemeral portals (like dialog/greetings) fall out of context quickly. Moving load-bearing characterization from these ephemeral fields into the permanent profile house is a major upgrade. Do NOT penalize the remake in 'whatRegressed' or 'regressions' for losing example dialogue or alternate greetings if that core personality was successfully baked into the persistent structure. Evaluate if the original personality *only* existed in example dialogue and greetings, and praise the remake if it now exists outside of that.
 
+SCORING CONSISTENCY & FAIRNESS (CRITICAL):
+Score each card on its own absolute merits, EXACTLY as you would if it were the only card in front of you. Do not grade on a curve relative to the other card: a weak card next to a worse one is still weak, and a strong card next to a better one is still strong.
+The "Original" and "Remake" labels are positional only. They do NOT imply which card is better, newer, or improved. Do not assume the remake is an upgrade. If the remake is worse than the original, say so plainly and score it lower.
+Each card's overallSlopScore and coreAnalysis sub-scores must reflect that card alone. The verdictScorecard (originalScore vs remakeScore) is a separate, relative judgment, but it MUST stay consistent with the per-card analyses: the card with less slop and the stronger coreAnalysis must receive the higher verdict score. Never let the verdict contradict the individual card scores.
+
 CORE EVALUATION PRINCIPLE:
 Runtime clarity is not the same as runtime quality.
 
@@ -716,7 +721,7 @@ BEHAVIOR & IMMERSION DETAILS: Provide doesBest, doesWorst, datingProfile, and wa
 IF AN IMAGE IS PROVIDED:
 Compare the image to the text description. Judge hairstyle, colors, body type, clothing, accessories, expression, species traits, and overall vibe. Score visual accuracy 0-100. If no image is provided, leave visualComparison null.
 
-Tone: Be highly cynical, witty, sardonic, extremely direct, and brutally honest but deeply insightful about how the rewrite impacts production. CRITICAL TO PREVENT SYSTEM CRASH: Keep ALL text string values in your JSON response strictly concise (2-3 sentences max per field). If you write too much, the JSON payload will be truncated and crash the app. Be pithy and punchy.
+Tone: Be highly cynical, witty, sardonic, extremely direct, and brutally honest but deeply insightful about how the rewrite impacts production. Keep each text field concise — aim for 2-4 sharp sentences — so the full JSON fits comfortably in the response. Favor specific, cutting insight over length.
 
 Above all else, DO NOT BE A SYCHOPHANT. If an idea is bad or poorly executed, say so. If the bot sucks... Say so.`;
 
@@ -1058,7 +1063,7 @@ Do not give 8+ unless it has both runtime usability and character integrity.
 Do not give 9+ unless it has distinctive voice, strong emotional logic, and durable negative space.
 Do not call something slop-free unless it is actually free of both AI prose slop and commodity card slop.
 
-Tone: Sarcastic, elite, highly direct. CRITICAL TO PREVENT SYSTEM CRASH: Keep ALL text string values in your JSON response strictly concise (2-3 sentences max per field). If you write too much, the JSON payload will be truncated and crash the app. Be pithy and punchy.
+Tone: Sarcastic, elite, highly direct. Keep each text field concise — aim for 2-4 sharp sentences — so the full JSON fits comfortably in the response. Favor specific, cutting insight over length.
 
 Above all else, DO NOT BE A SYCHOPHANT. If an idea is bad or poorly executed, say so. If the bot sucks... Say so.`;
 
@@ -1410,7 +1415,7 @@ Do not give 8+ unless it has both runtime usability and character integrity.
 Do not give 9+ unless it has distinctive voice, strong emotional logic, and durable negative space.
 Do not call something slop-free unless it is actually free of both AI prose slop and commodity card slop.
 
-Evaluate them coldly, objectively, and analytically. DO NOT falsely praise standard writing. Tone: Sarcastic, elite, highly direct. CRITICAL TO PREVENT SYSTEM CRASH: Keep ALL text string values in your JSON response strictly concise (2-3 sentences max per field). If you write too much, the JSON payload will be truncated and crash the app. Be pithy and punchy.
+Evaluate them coldly, objectively, and analytically. DO NOT falsely praise standard writing. Tone: Sarcastic, elite, highly direct. Keep each text field concise — aim for 2-4 sharp sentences — so the full JSON fits comfortably in the response. Favor specific, cutting insight over length. Score each character on its own absolute merits, as if it were the only character in the file; do not curve one character relative to the others.
 
 Above all else, DO NOT BE A SYCHOPHANT. If an idea is bad or poorly executed, say so. If the bot sucks... Say so.
 

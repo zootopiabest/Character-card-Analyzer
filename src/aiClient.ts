@@ -50,8 +50,8 @@ function providerLabel(provider: string): string {
 // strings keep working across providers.
 function normalizeModel(model: string | null | undefined, provider: string): string {
   if (!model || !model.trim()) {
-    if (provider === "openrouter") return "google/gemini-2.5-pro";
-    if (provider === "openai") return "gpt-4o";
+    if (provider === "openrouter") return "Google/Gemini-3.5-flash";
+    if (provider === "openai") return "gpt-5.5";
     return "gemini-3.5-flash";
   }
   let m = model.trim();

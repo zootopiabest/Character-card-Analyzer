@@ -596,8 +596,6 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                     >
                       <option value="gemini-3.5-flash">gemini-3.5-flash // Balanced and Ultra-Fast (Default)</option>
                       <option value="gemini-2.5-pro">gemini-2.5-pro // Analytical Logic reasoning</option>
-                      <option value="gemini-2.5-flash">gemini-2.5-flash // Speed-Optimized Model</option>
-                      <option value="gemini-1.5-pro">gemini-1.5-pro // Legacy Deep Concordance context</option>
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-zinc-500 font-mono text-xs">
                       ▼
@@ -621,7 +619,7 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                       type="text"
                       value={selectedModel}
                       onChange={(e) => setSelectedModel(e.target.value)}
-                      placeholder={selectedProvider === "openai" ? "e.g. gpt-4o or gpt-4-turbo" : selectedProvider === "custom" ? "e.g. meta-llama/Llama-3-8b" : "e.g. gryphe/mythomax-l2-13b"}
+                      placeholder={selectedProvider === "openai" ? "e.g. gpt-5.5" : selectedProvider === "custom" ? "e.g. meta-llama/Llama-3-8b" : "e.g. gryphe/mythomax-l2-13b"}
                       className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded p-2 text-xs font-mono text-[#00F0FF] placeholder-zinc-700 focus:outline-none focus:border-[#00F0FF]/60"
                     />
                   ) : (

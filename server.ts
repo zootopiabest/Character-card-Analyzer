@@ -334,7 +334,7 @@ ${analyzerNotes}
                 originality: {
                   type: Type.OBJECT,
                   properties: {
-                    score: { type: Type.INTEGER, description: "Score from 0 (cliché copy-paste) to 100 (highly unique premise)." },
+                    score: { type: Type.INTEGER, description: "Score from 0 (cliché copy-paste) to 10 (highly unique premise)." },
                     level: { type: Type.STRING },
                     notes: { type: Type.STRING, description: "Sardonic but encouraging summary of the concept's novelty." }
                   },
@@ -343,7 +343,7 @@ ${analyzerNotes}
                 negativeSpace: {
                   type: Type.OBJECT,
                   properties: {
-                    score: { type: Type.INTEGER, description: "Score from 0 (dense, repetitive keyword token-dump) to 100 (concise, high context-efficiency formatting)." },
+                    score: { type: Type.INTEGER, description: "Score from 0 (dense, repetitive keyword token-dump) to 10 (concise, high context-efficiency formatting)." },
                     level: { type: Type.STRING },
                     notes: { type: Type.STRING, description: "Notes on how efficient the prompt design is to keep token costs low." }
                   },
@@ -352,7 +352,7 @@ ${analyzerNotes}
                 cohesion: {
                   type: Type.OBJECT,
                   properties: {
-                    score: { type: Type.INTEGER, description: "Score from 0 (schizoid conflicting logic that crashes prompt) to 100 (harmonious core characterization)." },
+                    score: { type: Type.INTEGER, description: "Score from 0 (schizoid conflicting logic that crashes prompt) to 10 (harmonious core characterization)." },
                     level: { type: Type.STRING },
                     notes: { type: Type.STRING, description: "Notes focusing on how solid the core logic remains despite harmless flavor details." }
                   },
@@ -361,7 +361,7 @@ ${analyzerNotes}
                 tropeUsage: {
                   type: Type.OBJECT,
                   properties: {
-                    score: { type: Type.INTEGER, description: "Score from 0 (lazy crutch) to 100 (tropes executed brilliantly or given an amazing subversion)." },
+                    score: { type: Type.INTEGER, description: "Score from 0 (lazy crutch) to 10 (tropes executed brilliantly or given an amazing subversion)." },
                     level: { type: Type.STRING },
                     notes: { type: Type.STRING, description: "A witty evaluation of the character's tropes." }
                   },
@@ -370,7 +370,7 @@ ${analyzerNotes}
                 creatorCraft: {
                   type: Type.OBJECT,
                   properties: {
-                    score: { type: Type.INTEGER, description: "Score from 0 (amateurish) to 100 (legendary) based on greeting design, alternate greetings, and optional example dialogue syntax." },
+                    score: { type: Type.INTEGER, description: "Score from 0 (amateurish) to 10 (legendary) based on greeting design, alternate greetings, and optional example dialogue syntax." },
                     level: { type: Type.STRING, description: "Level string e.g., 'Amateurish', 'Competent', 'Slick Cardwright', 'Masterful'." },
                     notes: { type: Type.STRING, description: "Witty and extremely direct notes on how well-crafted the greetings/alternate greetings are and optional example dialogue formatting." }
                   },
@@ -629,11 +629,11 @@ app.post("/api/compare", async (req, res) => {
     "slopLabel": "Certified Human",
     "slopSummary": "A concise diagnostic summary under 40 words",
     "coreAnalysis": {
-      "originality": { "score": 80, "level": "HIGH", "notes": "Deep insight here" },
-      "negativeSpace": { "score": 60, "level": "OPTIMAL", "notes": "Clutter rating" },
-      "cohesion": { "score": 75, "level": "GOOD", "notes": "Concept fit" },
-      "tropeUsage": { "score": 90, "level": "SUBTLE", "notes": "Trope description" },
-      "creatorCraft": { "score": 70, "level": "EXPERT", "notes": "Refined structure notes" }
+      "originality": { "score": 8, "level": "HIGH", "notes": "Deep insight here" },
+      "negativeSpace": { "score": 6, "level": "OPTIMAL", "notes": "Clutter rating" },
+      "cohesion": { "score": 7, "level": "GOOD", "notes": "Concept fit" },
+      "tropeUsage": { "score": 9, "level": "SUBTLE", "notes": "Trope description" },
+      "creatorCraft": { "score": 7, "level": "EXPERT", "notes": "Refined structure notes" }
     },
     "criticalAssessment": "General structural playability audit details...",
     "quippySellSummary": "Funny tagline summarizing character essence...",
@@ -661,11 +661,11 @@ app.post("/api/compare", async (req, res) => {
     "slopLabel": "Highly Refined",
     "slopSummary": "A concise diagnostic summary under 40 words",
     "coreAnalysis": {
-      "originality": { "score": 85, "level": "HIGH", "notes": "Deep insight here" },
-      "negativeSpace": { "score": 80, "level": "OPTIMAL", "notes": "Clutter rating" },
-      "cohesion": { "score": 85, "level": "EXCELLENT", "notes": "Concept fit" },
-      "tropeUsage": { "score": 95, "level": "EXQUISITE", "notes": "Trope description" },
-      "creatorCraft": { "score": 90, "level": "MASTERFUL", "notes": "Refined structure notes" }
+      "originality": { "score": 8, "level": "HIGH", "notes": "Deep insight here" },
+      "negativeSpace": { "score": 8, "level": "OPTIMAL", "notes": "Clutter rating" },
+      "cohesion": { "score": 9, "level": "EXCELLENT", "notes": "Concept fit" },
+      "tropeUsage": { "score": 9, "level": "EXQUISITE", "notes": "Trope description" },
+      "creatorCraft": { "score": 9, "level": "MASTERFUL", "notes": "Refined structure notes" }
     },
     "criticalAssessment": "General structural playability audit details...",
     "quippySellSummary": "Funny tagline summarizing character essence...",
@@ -694,8 +694,8 @@ app.post("/api/compare", async (req, res) => {
     "whatImproved": ["Bullet detail of improvement 1", "Bullet detail of improvement 2"],
     "whatRegressed": ["Bullet detail of regression 1", "Bullet detail of regression 2"],
     "verdictScorecard": {
-      "originalScore": 75,
-      "remakeScore": 85
+      "originalScore": 7,
+      "remakeScore": 8
     }
   }
 }`

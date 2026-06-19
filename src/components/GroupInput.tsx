@@ -1,0 +1,348 @@
+import mammoth from 'mammoth';
+import React, { useState, useRef } from "react";
+import { Upload, X, Plus } from "lucide-react";
+import { tryExtractCharaMetadata, buildDescriptionFromJson } from "../utils";
+
+interface GroupInputProps {
+  onAnalyze: (
+    characters: Array<{ name: string; description: string }>,
+    customApiKey: string | null,
+    selectedModel: string | null,
+    provider: string,
+    customBaseUrl: string | null
+  ) => void;
+  isLoading: boolean;
+}
+
+interface GroupMember {
+  id: string;
+  name: string;
+  description: string;
+  previewUrl: string | null;
+}
+
+export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
+  const [members, setMembers] = useState<GroupMember[]>([
+    { id: "1", name: "", description: "", previewUrl: null },
+    { id: "2", name: "", description: "", previewUrl: null },
+  ]);
+
+  const [selectedProvider, setSelectedProvider] = useState<string>("gemini");
+  const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
+  const [isManualModel, setIsManualModel] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const [customApiKey, setCustomApiKey] = useState("");
+  const [customBaseUrl, setCustomBaseUrl] = useState("");
+
+  const addMember = () => {
+    setMembers([
+      ...members,
+      { id: Date.now().toString(), name: "", description: "", previewUrl: null },
+    ]);
+  };
+
+  const removeMember = (id: string) => {
+    if (members.length <= 2) {
+      alert("A group must have at least 2 characters.");
+      return;
+    }
+    setMembers(members.filter((m) => m.id !== id));
+  };
+
+  const handleMemberChange = (id: string, field: "name" | "description", value: string) => {
+    setMembers(members.map((m) => (m.id === id ? { ...m, [field]: value } : m)));
+  };
+
+  const handleFileChange = (id: string, file: File) => {
+    if (file.type === "application/json" || file.name.toLowerCase().endsWith(".json")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const result = e.target?.result as string;
+          const data = JSON.parse(result);
+          const extracted = buildDescriptionFromJson(data);
+          if (extracted) {
+            setMembers((prev) =>
+              prev.map((m) =>
+                m.id === id
+                  ? {
+                      ...m,
+                      name: extracted.name || m.name || "JSON Character",
+                      description: extracted.description || m.description,
+                    }
+                  : m
+              )
+            );
+          }
+        } catch (error) {
+          alert("Failed to parse JSON file.");
+        }
+      };
+      reader.readAsText(file);
+    
+    } else if (file.name.toLowerCase().endsWith(".txt") || file.name.toLowerCase().endsWith(".md") || file.name.toLowerCase().endsWith(".rtf") || file.type === "text/plain" || file.type === "text/markdown") {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        setMembers((prev) =>
+          prev.map((m) =>
+            m.id === id ? { ...m, description: text } : m
+          )
+        );
+      };
+      reader.readAsText(file);
+    } else if (file.name.toLowerCase().endsWith(".docx") || file.name.toLowerCase().endsWith(".doc")) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        try {
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          setMembers((prev) =>
+            prev.map((m) =>
+              m.id === id ? { ...m, description: result.value } : m
+            )
+          );
+        } catch (error) {
+          alert("Failed to read document.");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setMembers((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, previewUrl: result } : m))
+        );
+      };
+      reader.readAsDataURL(file);
+
+      if (file.type === "image/png" || file.name.toLowerCase().endsWith(".png")) {
+        const bufferReader = new FileReader();
+        bufferReader.onload = (e) => {
+          if (e.target?.result) {
+            const buffer = e.target.result as ArrayBuffer;
+            const extracted = tryExtractCharaMetadata(buffer);
+            if (extracted) {
+              setMembers((prev) =>
+                prev.map((m) =>
+                  m.id === id
+                    ? {
+                        ...m,
+                        name: extracted.name || m.name || "Embedded Character",
+                        description: extracted.description || m.description,
+                      }
+                    : m
+                )
+              );
+            }
+          }
+        };
+        bufferReader.readAsArrayBuffer(file);
+      }
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (members.some((m) => !m.description.trim())) {
+      alert("Please provide instructions/description for all characters in the group.");
+      return;
+    }
+    
+    const characters = members.map(m => ({
+      name: m.name || `Character ${m.id}`,
+      description: m.description
+    }));
+
+    onAnalyze(
+      characters,
+      customApiKey.trim() || null,
+      selectedModel,
+      selectedProvider,
+      customBaseUrl.trim() || null
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {members.map((member, index) => (
+          <div key={member.id} className="bg-[#050505] border border-[#1A1A1A] rounded p-4 relative">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[10px] font-mono text-[#00F0FF] font-bold uppercase tracking-widest">
+                Member 0{index + 1}
+              </span>
+              {members.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => removeMember(member.id)}
+                  className="text-zinc-600 hover:text-red-500 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Character Name"
+                value={member.name}
+                onChange={(e) => handleMemberChange(member.id, "name", e.target.value)}
+                className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-white focus:outline-none focus:border-[#00F0FF]/50"
+              />
+
+              <div className="relative">
+                <textarea
+                  value={member.description}
+                  onChange={(e) => handleMemberChange(member.id, "description", e.target.value)}
+                  placeholder="Paste instructions/prompt or drop a PNG..."
+                  rows={4}
+                  className="w-full text-[10px] font-mono bg-black text-zinc-300 p-2 rounded border border-[#222] focus:border-[#00F0FF]/50 focus:outline-none resize-none"
+                />
+                
+                <input
+                  type="file"
+                  accept="image/*,application/json,.json,.txt,.md,.rtf,.docx,.doc"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Drop a PNG/JSON/TXT/DOCX card file here"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileChange(member.id, file);
+                  }}
+                />
+                
+                {!member.description && !member.previewUrl && (
+                  <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center opacity-30 text-zinc-400">
+                    <Upload size={16} className="mb-1" />
+                    <span className="text-[9px] uppercase tracking-wider font-mono">Drop Card Here</span>
+                  </div>
+                )}
+                
+                {member.previewUrl && !member.description && (
+                  <div className="absolute inset-0 pointer-events-none p-1 opacity-20">
+                     <img src={member.previewUrl} className="w-full h-full object-cover rounded" alt="Preview"/>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {members.length < 8 && (
+          <div 
+            onClick={addMember}
+            className="bg-[#0A0A0A] border border-[#1A1A1A] border-dashed rounded p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-[#111] hover:border-[#00F0FF]/30 transition-all text-zinc-500 hover:text-[#00F0FF] group"
+          >
+            <div className="h-10 w-10 rounded-full bg-black border border-[#222] flex items-center justify-center mb-2 group-hover:border-[#00F0FF]/50 transition-colors">
+              <Plus size={18} />
+            </div>
+            <span className="text-[10px] font-mono tracking-widest uppercase font-bold">Add Character</span>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-[#0F0F0F] border border-[#222] p-4 rounded space-y-4">
+        {/* Same config inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Active LLM Model</label>
+              {selectedProvider !== "gemini" && (
+                <label className="flex items-center gap-1.5 text-[9px] font-mono text-zinc-400 cursor-pointer">
+                  <input type="checkbox" checked={isManualModel} onChange={(e) => setIsManualModel(e.target.checked)} className="rounded border-[#222] bg-black text-[#00F0FF] focus:ring-0" />
+                  ENTER MANUALLY
+                </label>
+              )}
+            </div>
+            {selectedProvider !== "gemini" ? (
+              isManualModel || selectedProvider === "custom" ? (
+                <input
+                  type="text"
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  placeholder={selectedProvider === "openai" ? "e.g. gpt-4o or gpt-4-turbo" : selectedProvider === "custom" ? "e.g. meta-llama/Llama-3-8b" : "e.g. anthropic/claude-3.5-sonnet"}
+                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-350 focus:outline-none"
+                />
+              ) : (
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none cursor-pointer"
+                >
+                  <option value="Deepseek/deepseek-v4-flash">Deepseek/deepseek-v4-flash</option>
+                  <option value="Deepseek/deepseek-v4-pro">Deepseek/deepseek-v4-pro</option>
+                  <option value="Google/gemma-4-31b-it">Google/gemma-4-31b-it</option>
+                  <option value="Google/gemini-3.1-flash-lite">Google/gemini-3.1-flash-lite</option>
+                  <option value="Google/Gemini-3.1-pro-preview">Google/Gemini-3.1-pro-preview</option>
+                  <option value="Google/Gemini-3.5-flash">Google/Gemini-3.5-flash</option>
+                  <option value="Anthropic/Claude-4.6-opus">Anthropic/Claude-4.6-opus</option>
+                  <option value="Anthropic/Claude-4.6-sonnet">Anthropic/Claude-4.6-sonnet</option>
+                  <option value="Anthropic/Claude-4.8-opus">Anthropic/Claude-4.8-opus</option>
+                  <option value="Anthropic/Claude-4.8-sonnet">Anthropic/Claude-4.8-sonnet</option>
+                </select>
+              )
+            ) : (
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none cursor-pointer"
+              >
+                <option value="gemini-3.5-flash">gemini-3.5-flash // Balanced and Ultra-Fast</option>
+                <option value="gemini-2.5-pro">gemini-2.5-pro // Analytical Logic</option>
+                <option value="gemini-2.5-flash">gemini-2.5-flash // Balanced / Fast</option>
+                <option value="gemini-1.5-pro">gemini-1.5-pro // Deprecated</option>
+              </select>
+            )}
+          </div>
+        </div>
+
+        <div className={`grid grid-cols-1 ${selectedProvider === "custom" ? "md:grid-cols-2" : ""} gap-4`}>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">
+                {selectedProvider === "custom" ? "API Key" : "Secret Credentials / API Token"}
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                className="text-[#00F0FF] text-[9px] font-mono uppercase tracking-widest hover:underline"
+              >
+                {showKey ? "Hide" : "Reveal"}
+              </button>
+            </div>
+            <input
+              type={showKey ? "text" : "password"}
+              value={customApiKey}
+              onChange={(e) => setCustomApiKey(e.target.value)}
+              placeholder={selectedProvider === "openrouter" ? "OpenRouter sk-or-... api key" : selectedProvider === "openai" ? "OpenAI sk-proj-... api key" : selectedProvider === "custom" ? "sk-..." : "AI Studio GEMINI_API_KEY"}
+              className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-[#00F0FF] placeholder-zinc-700 focus:outline-none"
+            />
+          </div>
+
+          {selectedProvider === "custom" && (
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Base URL</label>
+              <input
+                type="text"
+                value={customBaseUrl}
+                onChange={(e) => setCustomBaseUrl(e.target.value)}
+                placeholder="e.g. http://localhost:11434/v1"
+                className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-[#00F0FF] placeholder-zinc-700 focus:outline-none"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full bg-[#E0E0E0] hover:bg-white text-black font-bold uppercase tracking-[0.2em] text-sm py-4 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]"
+      >
+        {isLoading ? "Running Group Synergy Audit..." : "Initiate Group Synergy Audit"}
+      </button>
+    </form>
+  );
+}

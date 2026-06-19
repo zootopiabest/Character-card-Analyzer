@@ -1,0 +1,75 @@
+import React, { useState } from "react";
+import { Download, FileJson, FileText, ChevronDown } from "lucide-react";
+import { downloadFile, generateAuditMarkdown, generateComparisonMarkdown, generateGroupMarkdown, generateMultiCharMarkdown } from "../exportUtils";
+import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "../types";
+
+interface ExportButtonsProps {
+  data: any;
+  type: "audit" | "comparison" | "group" | "multichar";
+  charName?: string;
+}
+
+export default function ExportButtons({ data, type, charName }: ExportButtonsProps) {
+  const [open, setOpen] = useState(false);
+
+  const handleExportJson = () => {
+    const jsonStr = JSON.stringify(data, null, 2);
+    downloadFile(jsonStr, `report_${type}_${Date.now()}.json`, "application/json");
+    setOpen(false);
+  };
+
+  const handleExportMd = () => {
+    let md = "";
+    if (type === "audit") {
+      md = generateAuditMarkdown(data as AnalysisResult, charName);
+    } else if (type === "comparison") {
+      md = generateComparisonMarkdown(data as ComparisonResult);
+    } else if (type === "group") {
+      md = generateGroupMarkdown(data as GroupResult);
+    } else if (type === "multichar") {
+      md = generateMultiCharMarkdown(data as MultiCharResult, charName);
+    }
+    downloadFile(md, `report_${type}_${Date.now()}.md`, "text/markdown");
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative inline-block text-left relative z-50">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#222] border border-[#333] text-zinc-300 font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 rounded transition-all shadow-sm"
+      >
+        <Download size={14} className="text-[#00F0FF]" />
+        Export Report
+        <ChevronDown size={14} className="text-zinc-500" />
+      </button>
+
+      {open && (
+        <>
+          <div 
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-[#0A0A0A] ring-1 ring-white/10 z-50 overflow-hidden border border-[#222]">
+            <div className="py-1" role="menu" aria-orientation="vertical">
+              <button
+                onClick={handleExportMd}
+                className="w-full text-left px-4 py-2 text-[11px] font-mono whitespace-nowrap text-zinc-300 hover:bg-[#1A1A1A] hover:text-white flex items-center gap-2 border-b border-[#1A1A1A]"
+                role="menuitem"
+              >
+                <FileText size={14} className="text-[#00F0FF]" /> Markdown (.md)
+              </button>
+              <button
+                onClick={handleExportJson}
+                className="w-full text-left px-4 py-2 text-[11px] font-mono whitespace-nowrap text-zinc-300 hover:bg-[#1A1A1A] hover:text-white flex items-center gap-2"
+                role="menuitem"
+              >
+                <FileJson size={14} className="text-purple-400" /> JSON (.json)
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

@@ -11,13 +11,16 @@ interface CardInputProps {
     selectedModel: string | null,
     provider: string,
     customBaseUrl: string | null,
-    analyzerNotes?: string | null
+    analyzerNotes?: string | null,
+    thinkingMode?: boolean,
+    reasoningEffort?: string
   ) => void;
   isLoading: boolean;
   onNameExtracted?: (name: string | null) => void;
 }
 
 import { buildDescriptionFromJson, decodeBase64UTF8, tryExtractCharaMetadata } from "../utils";
+import { OPENROUTER_MODELS } from "../data/models";
 
 export default function CardInput({ onAnalyze, isLoading, onNameExtracted }: CardInputProps) {
   const [description, setDescription] = useState("");
@@ -223,7 +226,9 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
       useCustomSettings ? selectedModel : null,
       useCustomSettings ? selectedProvider : "gemini",
       useCustomSettings ? customBaseUrl : null,
-      analyzerNotes.trim() ? analyzerNotes : null
+      analyzerNotes.trim() ? analyzerNotes : null,
+      thinkingMode,
+      reasoningEffort
     );
   };
 
@@ -619,16 +624,9 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                         onChange={(e) => setSelectedModel(e.target.value)}
                         className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded p-2 text-xs font-mono text-zinc-200 appearance-none focus:outline-none focus:border-[#00F0FF]/60 cursor-pointer"
                       >
-                        <option value="Deepseek/deepseek-v4-flash">Deepseek/deepseek-v4-flash</option>
-                        <option value="Deepseek/deepseek-v4-pro">Deepseek/deepseek-v4-pro</option>
-                        <option value="Google/gemma-4-31b-it">Google/gemma-4-31b-it</option>
-                        <option value="Google/gemini-3.1-flash-lite">Google/gemini-3.1-flash-lite</option>
-                        <option value="Google/Gemini-3.1-pro-preview">Google/Gemini-3.1-pro-preview</option>
-                        <option value="Google/Gemini-3.5-flash">Google/Gemini-3.5-flash</option>
-                        <option value="Anthropic/Claude-4.6-opus">Anthropic/Claude-4.6-opus</option>
-                        <option value="Anthropic/Claude-4.6-sonnet">Anthropic/Claude-4.6-sonnet</option>
-                        <option value="Anthropic/Claude-4.8-opus">Anthropic/Claude-4.8-opus</option>
-                        <option value="Anthropic/Claude-4.8-sonnet">Anthropic/Claude-4.8-sonnet</option>
+                        {OPENROUTER_MODELS.map((m) => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-zinc-500 font-mono text-xs">
                         ▼

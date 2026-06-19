@@ -1,6 +1,7 @@
 import mammoth from 'mammoth';
 import React, { useState, useRef } from "react";
 import { Upload, FileImage, Sparkles, CheckCircle2, RotateCcw, ArrowRightLeft } from "lucide-react";
+import { OPENROUTER_MODELS } from "../data/models";
 
 interface ComparisonInputProps {
   onCompare: (
@@ -13,7 +14,9 @@ interface ComparisonInputProps {
     customApiKey: string | null,
     selectedModel: string | null,
     provider: string,
-    customBaseUrl: string | null
+    customBaseUrl: string | null,
+    thinkingMode?: boolean,
+    reasoningEffort?: string
   ) => void;
   isLoading: boolean;
 }
@@ -487,16 +490,9 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none cursor-pointer"
                 >
-                  <option value="Deepseek/deepseek-v4-flash">Deepseek/deepseek-v4-flash</option>
-                  <option value="Deepseek/deepseek-v4-pro">Deepseek/deepseek-v4-pro</option>
-                  <option value="Google/gemma-4-31b-it">Google/gemma-4-31b-it</option>
-                  <option value="Google/gemini-3.1-flash-lite">Google/gemini-3.1-flash-lite</option>
-                  <option value="Google/Gemini-3.1-pro-preview">Google/Gemini-3.1-pro-preview</option>
-                  <option value="Google/Gemini-3.5-flash">Google/Gemini-3.5-flash</option>
-                  <option value="Anthropic/Claude-4.6-opus">Anthropic/Claude-4.6-opus</option>
-                  <option value="Anthropic/Claude-4.6-sonnet">Anthropic/Claude-4.6-sonnet</option>
-                  <option value="Anthropic/Claude-4.8-opus">Anthropic/Claude-4.8-opus</option>
-                  <option value="Anthropic/Claude-4.8-sonnet">Anthropic/Claude-4.8-sonnet</option>
+                  {OPENROUTER_MODELS.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
                 </select>
               )
             ) : (

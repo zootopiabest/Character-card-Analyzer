@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Sparkles, Cpu, HardDrive, Compass, Info, FileText, CheckCircle2, Users, Globe } from "lucide-react";
+import { Sparkles, Cpu, Compass, FileText, Users, Globe } from "lucide-react";
 import CardInput from "./components/CardInput";
 import ComparisonInput from "./components/ComparisonInput";
 import ComparisonView from "./components/ComparisonView";
@@ -12,7 +12,7 @@ import Observations from "./components/Observations";
 import VisualMatch from "./components/VisualMatch";
 import ExportButtons from "./components/ExportButtons";
 import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "./types";
-import { safeParseJSON } from "./utils";
+import { runAnalyze, runCompare, runGroup, runMultichar } from "./aiClient";
 
 
 export default function App() {
@@ -58,134 +58,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  const fetchOpenRouterClient = async (
-    endpointType: "analyze" | "compare" | "group" | "multichar",
-    payload: any,
-    apiKey: string,
-    selectedModel: string | null,
-    thinkingMode: boolean = false,
-    reasoningEffort: string = "medium"
-  ) => {
-    // 1. Fetch system instructions and schemas from the server GET /api/system-instructions
-    const instResponse = await fetch("/api/system-instructions");
-    if (!instResponse.ok) {
-      throw new Error(`Failed to retrieve prompt templates: ${instResponse.statusText}`);
-    }
-    const templates = await instResponse.json();
-    const template = templates[endpointType];
-    if (!template) {
-      throw new Error(`Instruction template not found for: ${endpointType}`);
-    }
-
-    const systemContent = template.systemInstruction + template.schemaPrompt;
-
-    // 2. Prepare model mapping safely matching server-side rules
-    let modelToUse = selectedModel ? selectedModel.trim() : "google/gemini-2.5-pro";
-    let lowerModel = modelToUse.toLowerCase();
-    if (lowerModel.startsWith("gemini-")) {
-      modelToUse = "google/" + modelToUse;
-    }
-
-    // 3. Formulate the user message contents
-    let userContent: any = "";
-    if (endpointType === "analyze") {
-      const { description, imageBase64, imageMimeType } = payload;
-      if (imageBase64 && imageMimeType) {
-        userContent = [
-          {
-            type: "text",
-            text: `Analyze the following character card/description instructions intended for an LLM runtime.
-
-CHARACTER DESCRIPTION / INSTRUCTIONS:
-"""
-${description}
-"""
-${payload.analyzerNotes ? `\n[OOC/ANALYZER NOTES - EXTERNAL CONTEXT FOR YOU, THE AUDITOR]\nCRITICAL INSTRUCTION: The user has provided the following external context. You MUST take this into account when evaluating the card and DO NOT penalize choices that are explicitly justified by these notes:\n"""\n${payload.analyzerNotes}\n"""` : ""}`
-          },
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:${imageMimeType};base64,${imageBase64}`
-            }
-          }
-        ];
-      } else {
-        userContent = `Analyze the following character card/description instructions intended for an LLM runtime.
-
-CHARACTER DESCRIPTION / INSTRUCTIONS:
-"""
-${description}
-"""
-${payload.analyzerNotes ? `\n[OOC/ANALYZER NOTES - EXTERNAL CONTEXT FOR YOU, THE AUDITOR]\nCRITICAL INSTRUCTION: The user has provided the following external context. You MUST take this into account when evaluating the card and DO NOT penalize choices that are explicitly justified by these notes:\n"""\n${payload.analyzerNotes}\n"""` : ""}`;
-      }
-    } else if (endpointType === "compare") {
-      const { originalDescription, remakeDescription } = payload;
-      userContent = `Compare original vs remake character designs.
-          
-ORIGINAL CHARACTER DESCRIPTION:
-"""
-${originalDescription}
-"""
-
-REMAKE CHARACTER DESCRIPTION:
-"""
-${remakeDescription}
-"""`;
-    } else if (endpointType === "group") {
-      const { characters } = payload;
-      userContent = characters.map((char: any, i: number) => `CHAR_${i + 1} (${char.name}):
-${char.description}`).join("\n\n------\n\n");
-    } else if (endpointType === "multichar") {
-      const { description } = payload;
-      userContent = `MULTI-CHARACTER CARD DATA TO ANALYZE:\n\n${description}`;
-    }
-
-    // 4. Dispatch the HTTP request directly to OpenRouter
-    const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey.trim()}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": window.location.origin || "https://ai.studio",
-        "X-Title": `LoreSieve direct browser execution for ${endpointType}`
-      },
-      body: JSON.stringify({
-        model: modelToUse,
-        messages: [
-          { role: "system", content: systemContent },
-          { role: "user", content: userContent }
-        ],
-        ...(thinkingMode && { reasoning_effort: reasoningEffort }),
-        max_tokens: 8192
-      })
-    });
-
-    if (!orResponse.ok) {
-      const text = await orResponse.text();
-      let errorMsg = text;
-      try {
-        const errJson = JSON.parse(text);
-        if (errJson.error && errJson.error.message) {
-          errorMsg = errJson.error.message;
-        }
-      } catch (_) {}
-      throw new Error(`OpenRouter Access Failed: ${orResponse.status} - ${errorMsg}`);
-    }
-
-    const data = await orResponse.json();
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error("OpenRouter direct compliance error: missing text generation output.");
-    }
-
-    const rawText = data.choices[0].message.content || "";
-    try {
-      return safeParseJSON(rawText);
-    } catch (e: any) {
-      console.warn("Raw fallback output content parsing:", rawText, e);
-      throw new Error(`Failed to parse the auditor response as a standard JSON structure. Reason: ${e.message}. Please try analyzing again.`);
-    }
-  };
-
   const handleAnalyze = async (
     description: string,
     imageBase64: string | null,
@@ -194,48 +66,20 @@ ${char.description}`).join("\n\n------\n\n");
     selectedModel: string | null,
     provider: string,
     customBaseUrl: string | null = null,
-    analyzerNotes: string | null = null, thinkingMode: boolean = false, reasoningEffort: string = "medium") => {
+    analyzerNotes: string | null = null,
+    thinkingMode: boolean = false,
+    reasoningEffort: string = "medium"
+  ) => {
     setIsLoading(true);
     setError(null);
     setAnalysis(null);
 
     try {
-      // Direct browser fallback for OpenRouter is activated when a custom API key is present
-      if (provider === "openrouter" && customApiKey && customApiKey.trim() !== "") {
-        const directResult = await fetchOpenRouterClient(
-          "analyze",
-          {  description, imageBase64, imageMimeType, analyzerNotes  },
-          customApiKey,
-          selectedModel,
-          thinkingMode,
-          reasoningEffort
-        );
-        setAnalysis(directResult);
-        return;
-      }
-
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description,
-          imageBase64,
-          imageMimeType,
-          customApiKey,
-          selectedModel,
-          provider,
-          customBaseUrl,
-          analyzerNotes,
-          thinkingMode,
-          reasoningEffort
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "An error occurred during analysis.");
-      }
-      setAnalysis(data);
+      const result = await runAnalyze(
+        { description, imageBase64, imageMimeType, analyzerNotes },
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort }
+      );
+      setAnalysis(result);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to complete AI character audit.");
@@ -247,49 +91,27 @@ ${char.description}`).join("\n\n------\n\n");
   const handleCompare = async (
     originalDescription: string,
     remakeDescription: string,
-    originalImageBase64: string | null,
-    originalImageMimeType: string | null,
-    remakeImageBase64: string | null,
-    remakeImageMimeType: string | null,
+    _originalImageBase64: string | null,
+    _originalImageMimeType: string | null,
+    _remakeImageBase64: string | null,
+    _remakeImageMimeType: string | null,
     customApiKey: string | null,
     selectedModel: string | null,
     provider: string,
-    customBaseUrl: string | null = null, thinkingMode: boolean = false, reasoningEffort: string = "medium") => {
+    customBaseUrl: string | null = null,
+    thinkingMode: boolean = false,
+    reasoningEffort: string = "medium"
+  ) => {
     setIsLoading(true);
     setError(null);
     setComparisonResult(null);
 
     try {
-      if (provider === "openrouter" && customApiKey && customApiKey.trim() !== "") {
-        const directResult = await fetchOpenRouterClient("compare", { originalDescription, remakeDescription }, customApiKey, selectedModel, thinkingMode, reasoningEffort);
-        setComparisonResult(directResult);
-        return;
-      }
-
-      const response = await fetch("/api/compare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          originalDescription,
-          remakeDescription,
-          originalImageBase64,
-          originalImageMimeType,
-          remakeImageBase64,
-          remakeImageMimeType,
-          customApiKey,
-          selectedModel,
-          provider,
-          customBaseUrl,
-          thinkingMode,
-          reasoningEffort
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "An error occurred during comparison.");
-      }
-      setComparisonResult(data);
+      const result = await runCompare(
+        { originalDescription, remakeDescription },
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort }
+      );
+      setComparisonResult(result);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to complete character comparison audit.");
@@ -303,36 +125,20 @@ ${char.description}`).join("\n\n------\n\n");
     customApiKey: string | null,
     selectedModel: string | null,
     provider: string,
-    customBaseUrl: string | null = null
+    customBaseUrl: string | null = null,
+    thinkingMode: boolean = false,
+    reasoningEffort: string = "medium"
   ) => {
     setIsLoading(true);
     setError(null);
     setGroupResult(null);
 
     try {
-      if (provider === "openrouter" && customApiKey && customApiKey.trim() !== "") {
-        const directResult = await fetchOpenRouterClient("group", { characters }, customApiKey, selectedModel, thinkingMode, reasoningEffort);
-        setGroupResult(directResult);
-        return;
-      }
-
-      const response = await fetch("/api/group", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          characters,
-          customApiKey,
-          selectedModel,
-          provider,
-          customBaseUrl,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "An error occurred during group synergy audit.");
-      }
-      setGroupResult(data);
+      const result = await runGroup(
+        { characters },
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort }
+      );
+      setGroupResult(result);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to complete group character audit.");
@@ -343,41 +149,26 @@ ${char.description}`).join("\n\n------\n\n");
 
   const handleMultiCharAnalyze = async (
     description: string,
-    imageBase64: string | null,
-    imageMimeType: string | null,
+    _imageBase64: string | null,
+    _imageMimeType: string | null,
     customApiKey: string | null,
     selectedModel: string | null,
     provider: string,
-    customBaseUrl: string | null = null
+    customBaseUrl: string | null = null,
+    _analyzerNotes: string | null = null,
+    thinkingMode: boolean = false,
+    reasoningEffort: string = "medium"
   ) => {
     setIsLoading(true);
     setError(null);
     setMultiCharResult(null);
 
     try {
-      if (provider === "openrouter" && customApiKey && customApiKey.trim() !== "") {
-        const directResult = await fetchOpenRouterClient("multichar", { description }, customApiKey, selectedModel, thinkingMode, reasoningEffort);
-        setMultiCharResult(directResult);
-        return;
-      }
-
-      const response = await fetch("/api/multichar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description,
-          customApiKey,
-          selectedModel,
-          provider,
-          customBaseUrl,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "An error occurred during multi-char analysis.");
-      }
-      setMultiCharResult(data);
+      const result = await runMultichar(
+        { description },
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort }
+      );
+      setMultiCharResult(result);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to complete multi-character AI audit.");
@@ -794,7 +585,7 @@ ${char.description}`).join("\n\n------\n\n");
                           </h3>
                         </div>
 
-                        <div className="border border-[#1A1A1A] bg-[#0A0A0A] p-5 rounded-xl whitespace-pro-wrap leading-relaxed text-xs text-zinc-300 font-mono">
+                        <div className="border border-[#1A1A1A] bg-[#0A0A0A] p-5 rounded-xl whitespace-pre-wrap leading-relaxed text-xs text-zinc-300 font-mono">
                           {analysis.criticalAssessment}
                         </div>
                       </div>

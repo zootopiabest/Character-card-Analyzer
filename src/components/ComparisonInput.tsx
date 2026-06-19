@@ -211,6 +211,8 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
     localStorage.setItem("loresieve_custom_base_url", customBaseUrl);
     localStorage.setItem("loresieve_selected_model", selectedModel);
 
+    // BYOK: always pass the entered key/model/provider; the panel only shows/hides
+    // these fields and must never null the key (no server fallback exists).
     onCompare(
       origDesc,
       remakeDesc,
@@ -218,10 +220,10 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
       origImgMimeType,
       remakeImgBase64,
       remakeImgMimeType,
-      useCustomSettings ? customApiKey : null,
-      useCustomSettings ? selectedModel : null,
-      useCustomSettings ? selectedProvider : "gemini",
-      useCustomSettings ? customBaseUrl : null, thinkingMode, reasoningEffort);
+      customApiKey,
+      selectedModel,
+      selectedProvider,
+      customBaseUrl, thinkingMode, reasoningEffort);
   };
 
   return (
@@ -465,6 +467,33 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
 
         {useCustomSettings && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-[#1E1E1E] animate-fadeIn">
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Provider</label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { id: "gemini", label: "Gemini", model: "gemini-3.5-flash" },
+                  { id: "openrouter", label: "OpenRouter", model: "anthropic/claude-3.5-sonnet" },
+                  { id: "openai", label: "OpenAI", model: "" },
+                  { id: "custom", label: "Custom", model: "" },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedProvider(p.id);
+                      setSelectedModel(p.model);
+                    }}
+                    className={`py-1.5 px-2 rounded text-[9px] font-mono text-center font-bold tracking-wider uppercase border transition-colors ${
+                      selectedProvider === p.id
+                        ? "bg-[#0A0A0A] border-[#00F0FF] text-white"
+                        : "bg-black border-[#222] text-zinc-500 hover:text-zinc-300 hover:bg-[#0A0A0A]"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
               <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Active LLM Model</label>

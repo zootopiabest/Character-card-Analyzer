@@ -89,6 +89,10 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
           const extracted = buildDescriptionFromJson(data);
           
           if (extracted) {
+            // A JSON card carries no image, so drop any image from a prior upload.
+            setImageBase64(null);
+            setImagePreview(null);
+            setImageMimeType(null);
             const extractedNameVal = extracted.name || "JSON Character";
             setExtractedName(extractedNameVal);
             onNameExtracted?.(extractedNameVal);
@@ -218,14 +222,17 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
     localStorage.setItem("loresieve_custom_base_url", customBaseUrl);
     localStorage.setItem("loresieve_selected_model", selectedModel);
 
+    // BYOK: always pass the entered key/model/provider. The settings panel only
+    // shows/hides these fields; it must never null out the key (that would make
+    // the app unrunnable, since there is no server fallback).
     onAnalyze(
       description,
       imageBase64,
       imageMimeType,
-      useCustomSettings ? customApiKey : null,
-      useCustomSettings ? selectedModel : null,
-      useCustomSettings ? selectedProvider : "gemini",
-      useCustomSettings ? customBaseUrl : null,
+      customApiKey,
+      selectedModel,
+      selectedProvider,
+      customBaseUrl,
       analyzerNotes.trim() ? analyzerNotes : null,
       thinkingMode,
       reasoningEffort
@@ -435,10 +442,10 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase">
-                Custom Runner Override
+                Model & API Key Settings
               </span>
               <span className="text-[9px] font-mono text-zinc-500 uppercase mt-0.5">
-                BRING_YOUR_OWN_MODEL_AND_KEY
+                BRING_YOUR_OWN_MODEL_AND_KEY // TOGGLE TO SHOW/HIDE
               </span>
             </div>
             <label className="relative inline-flex items-center cursor-pointer select-none">
@@ -542,10 +549,10 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                 />
                 <span className="text-[9px] leading-snug text-zinc-500 font-mono block">
                   {selectedProvider === "custom" ? (
-                    "Keys are stored locally within your secure session storage and used directly with the custom endpoint."
+                    "Your key is saved on this device (browser storage) and sent directly to the custom endpoint. It persists until you clear it or your browser data."
                   ) : (
                     <>
-                      Keys are stored locally within your secure session storage and used directly to interact with {selectedProvider === "openrouter" ? "OpenRouter's proxy hub" : selectedProvider === "openai" ? "OpenAI's platform" : "Google's API model runner"}. Get credentials at{" "}
+                      Your key is saved on this device (browser storage) and sent directly to {selectedProvider === "openrouter" ? "OpenRouter" : selectedProvider === "openai" ? "OpenAI" : "Google"}; it never passes through any server of ours. It persists on this device until you clear it. Get credentials at{" "}
                       <a
                         href={selectedProvider === "openrouter" ? "https://openrouter.ai/keys" : selectedProvider === "openai" ? "https://platform.openai.com/api-keys" : "https://aistudio.google.com/"}
                         target="_blank"

@@ -10,7 +10,9 @@ interface GroupInputProps {
     customApiKey: string | null,
     selectedModel: string | null,
     provider: string,
-    customBaseUrl: string | null
+    customBaseUrl: string | null,
+    thinkingMode?: boolean,
+    reasoningEffort?: string
   ) => void;
   isLoading: boolean;
 }
@@ -28,12 +30,22 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
     { id: "2", name: "", description: "", previewUrl: null },
   ]);
 
-  const [selectedProvider, setSelectedProvider] = useState<string>("gemini");
-  const [selectedModel, setSelectedModel] = useState("gemini-3.5-flash");
+  // Settings are shared with the other modes via the same localStorage keys,
+  // so the user enters their API key once and it works everywhere.
+  const [selectedProvider, setSelectedProvider] = useState<string>(
+    () => localStorage.getItem("loresieve_selected_provider") || "gemini"
+  );
+  const [selectedModel, setSelectedModel] = useState(
+    () => localStorage.getItem("loresieve_selected_model") || "gemini-3.5-flash"
+  );
   const [isManualModel, setIsManualModel] = useState(false);
   const [showKey, setShowKey] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState("");
-  const [customBaseUrl, setCustomBaseUrl] = useState("");
+  const [customApiKey, setCustomApiKey] = useState(
+    () => localStorage.getItem("loresieve_custom_api_key") || ""
+  );
+  const [customBaseUrl, setCustomBaseUrl] = useState(
+    () => localStorage.getItem("loresieve_custom_base_url") || ""
+  );
 
   const addMember = () => {
     setMembers([
@@ -156,12 +168,24 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
       description: m.description
     }));
 
+    // Persist to the shared settings so other modes pick up the same key/model.
+    localStorage.setItem("loresieve_selected_provider", selectedProvider);
+    localStorage.setItem("loresieve_custom_api_key", customApiKey);
+    localStorage.setItem("loresieve_custom_base_url", customBaseUrl);
+    localStorage.setItem("loresieve_selected_model", selectedModel);
+
+    // Respect the thinking-mode choice set in the other modes.
+    const thinkingMode = localStorage.getItem("loresieve_thinking_mode") === "true";
+    const reasoningEffort = localStorage.getItem("loresieve_reasoning_effort") || "medium";
+
     onAnalyze(
       characters,
       customApiKey.trim() || null,
       selectedModel,
       selectedProvider,
-      customBaseUrl.trim() || null
+      customBaseUrl.trim() || null,
+      thinkingMode,
+      reasoningEffort
     );
   };
 
@@ -245,6 +269,35 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
       </div>
 
       <div className="bg-[#0F0F0F] border border-[#222] p-4 rounded space-y-4">
+        {/* Provider selector (shared with the other modes) */}
+        <div className="space-y-1.5 pb-3 border-b border-[#222]">
+          <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Provider</label>
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { id: "gemini", label: "Gemini", model: "gemini-3.5-flash" },
+              { id: "openrouter", label: "OpenRouter", model: "anthropic/claude-3.5-sonnet" },
+              { id: "openai", label: "OpenAI", model: "" },
+              { id: "custom", label: "Custom", model: "" },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  setSelectedProvider(p.id);
+                  setSelectedModel(p.model);
+                }}
+                className={`py-1.5 px-2 rounded text-[9px] font-mono text-center font-bold tracking-wider uppercase border transition-colors ${
+                  selectedProvider === p.id
+                    ? "bg-[#0A0A0A] border-[#00F0FF] text-white"
+                    : "bg-black border-[#222] text-zinc-500 hover:text-zinc-300 hover:bg-[#0A0A0A]"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Same config inputs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">

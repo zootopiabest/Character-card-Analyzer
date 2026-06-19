@@ -11,5 +11,4 @@ export const OPENROUTER_MODELS = [
   "Anthropic/Claude-4.6-opus",
   "Anthropic/Claude-4.6-sonnet",
   "Anthropic/Claude-4.8-opus",
-  "Anthropic/Claude-4.8-sonnet",
 ];

@@ -2,5 +2,5 @@
   "name": "Character Card Analyzer",
   "description": "Analyze and rate character cards on slop, originality, tropes, cohesion, and alignment with uploaded card art.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

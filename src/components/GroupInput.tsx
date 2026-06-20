@@ -218,39 +218,49 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
                 className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-white focus:outline-none focus:border-[#00F0FF]/50"
               />
 
-              <div className="relative">
+              <div
+                className="relative"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleFileChange(member.id, file);
+                }}
+              >
                 <textarea
                   value={member.description}
                   onChange={(e) => handleMemberChange(member.id, "description", e.target.value)}
-                  placeholder="Paste instructions/prompt or drop a PNG..."
+                  placeholder="Paste instructions/prompt, or use Upload below..."
                   rows={4}
                   className="w-full text-[10px] font-mono bg-black text-zinc-300 p-2 rounded border border-[#222] focus:border-[#00F0FF]/50 focus:outline-none resize-none"
                 />
-                
-                <input
-                  type="file"
-                  accept="image/*,application/json,.json,.txt,.md,.rtf,.docx,.doc"
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  title="Drop a PNG/JSON/TXT/DOCX card file here"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileChange(member.id, file);
-                  }}
-                />
-                
+
                 {!member.description && !member.previewUrl && (
                   <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center opacity-30 text-zinc-400">
                     <Upload size={16} className="mb-1" />
-                    <span className="text-[9px] uppercase tracking-wider font-mono">Drop Card Here</span>
+                    <span className="text-[9px] uppercase tracking-wider font-mono">Drop or upload a card</span>
                   </div>
                 )}
-                
+
                 {member.previewUrl && !member.description && (
                   <div className="absolute inset-0 pointer-events-none p-1 opacity-20">
                      <img src={member.previewUrl} className="w-full h-full object-cover rounded" alt="Preview"/>
                   </div>
                 )}
               </div>
+
+              <label className="inline-flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-wider text-zinc-400 hover:text-[#00F0FF] cursor-pointer bg-black border border-[#222] rounded px-2 py-1 transition-colors w-fit">
+                <Upload size={11} /> Upload card file
+                <input
+                  type="file"
+                  accept="image/*,application/json,.json,.txt,.md,.rtf,.docx,.doc"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileChange(member.id, file);
+                  }}
+                />
+              </label>
             </div>
           </div>
         ))}
@@ -316,7 +326,7 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
                   type="text"
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  placeholder={selectedProvider === "openai" ? "e.g. gpt-4o or gpt-4-turbo" : selectedProvider === "custom" ? "e.g. meta-llama/Llama-3-8b" : "e.g. anthropic/claude-3.5-sonnet"}
+                  placeholder={selectedProvider === "openai" ? "e.g. gpt-5.5" : selectedProvider === "custom" ? "e.g. meta-llama/Llama-3-8b" : "e.g. anthropic/claude-3.5-sonnet"}
                   className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-350 focus:outline-none"
                 />
               ) : (
@@ -338,8 +348,6 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
               >
                 <option value="gemini-3.5-flash">gemini-3.5-flash // Balanced and Ultra-Fast</option>
                 <option value="gemini-2.5-pro">gemini-2.5-pro // Analytical Logic</option>
-                <option value="gemini-2.5-flash">gemini-2.5-flash // Balanced / Fast</option>
-                <option value="gemini-1.5-pro">gemini-1.5-pro // Deprecated</option>
               </select>
             )}
           </div>

@@ -50,9 +50,9 @@ function providerLabel(provider: string): string {
 // strings keep working across providers.
 function normalizeModel(model: string | null | undefined, provider: string): string {
   if (!model || !model.trim()) {
-    if (provider === "openrouter") return "google/gemini-2.5-pro";
-    if (provider === "openai") return "gpt-4o";
-    return "gemini-2.5-flash";
+    if (provider === "openrouter") return "Google/Gemini-3.5-flash";
+    if (provider === "openai") return "gpt-5.5";
+    return "gemini-3.5-flash";
   }
   let m = model.trim();
   if (provider === "openrouter") {
@@ -191,6 +191,50 @@ async function callGemini(
   return text || "{}";
 }
 
+// Models sometimes omit fields or return null where the UI expects an array.
+// Coerce the known list/object fields to safe defaults so rendering and export
+// can never crash on a missing field.
+const asArray = (v: any): any[] => (Array.isArray(v) ? v : []);
+const asObject = (v: any): any => (v && typeof v === "object" ? v : {});
+
+function normalizeAnalysis(d: any): any {
+  const data = asObject(d);
+  data.observations = asArray(data.observations);
+  if (data.visualComparison) {
+    data.visualComparison.matches = asArray(data.visualComparison.matches);
+    data.visualComparison.mismatches = asArray(data.visualComparison.mismatches);
+  }
+  return data;
+}
+
+function normalizeResult(endpoint: EndpointType, d: any): any {
+  if (endpoint === "analyze") return normalizeAnalysis(d);
+  if (endpoint === "compare") {
+    const data = asObject(d);
+    data.original = normalizeAnalysis(data.original);
+    data.remake = normalizeAnalysis(data.remake);
+    data.comparison = asObject(data.comparison);
+    data.comparison.whatImproved = asArray(data.comparison.whatImproved);
+    data.comparison.whatRegressed = asArray(data.comparison.whatRegressed);
+    data.comparison.verdictScorecard = asObject(data.comparison.verdictScorecard);
+    return data;
+  }
+  if (endpoint === "group") {
+    const data = asObject(d);
+    data.synergyAnalysis = asObject(data.synergyAnalysis);
+    data.synergyAnalysis.redundancyWarnings = asArray(data.synergyAnalysis.redundancyWarnings);
+    data.characterBreakdowns = asArray(data.characterBreakdowns);
+    data.groupScenarios = asObject(data.groupScenarios);
+    return data;
+  }
+  // multichar
+  const data = asObject(d);
+  data.characterAssessments = asArray(data.characterAssessments);
+  data.worldAndSystemAnalysis = asObject(data.worldAndSystemAnalysis);
+  data.playScenarios = asObject(data.playScenarios);
+  return data;
+}
+
 async function run(
   endpoint: EndpointType,
   userText: string,
@@ -199,14 +243,14 @@ async function run(
 ): Promise<any> {
   if (!cfg.apiKey || !cfg.apiKey.trim()) {
     throw new Error(
-      "No API key set. Open 'Custom Runner Override', choose your provider, and paste your own API key."
+      "No API key set. Open the 'Model & API Key Settings' panel, choose your provider, and paste your own API key."
     );
   }
   const raw =
     cfg.provider === "gemini"
       ? await callGemini(endpoint, userText, images, cfg)
       : await callOpenAICompatible(endpoint, userText, images, cfg);
-  return safeParseJSON(raw);
+  return normalizeResult(endpoint, safeParseJSON(raw));
 }
 
 function analyzerNotesBlock(notes: string | null | undefined): string {

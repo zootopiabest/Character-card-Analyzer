@@ -1,6 +1,6 @@
 import mammoth from 'mammoth';
 import React, { useState, useRef } from "react";
-import { Upload, FileImage, Sparkles, CheckCircle2, RotateCcw, ArrowRightLeft } from "lucide-react";
+import { Upload, CheckCircle2, RotateCcw, ArrowRightLeft } from "lucide-react";
 import { OPENROUTER_MODELS } from "../data/models";
 
 interface ComparisonInputProps {
@@ -282,9 +282,15 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                   <span className="text-[10px] font-mono text-zinc-400 block max-w-[180px] truncate">
                     {origFileName}
                   </span>
-                  <span className="text-[9px] font-mono text-emerald-400 block font-bold uppercase tracking-wider mt-0.5">
-                    Tavern Tag Loaded Successfully
-                  </span>
+                  {origExtractedName ? (
+                    <span className="text-[9px] font-mono text-emerald-400 block font-bold uppercase tracking-wider mt-0.5">
+                      Tavern Tag Loaded Successfully
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-mono text-zinc-500 block font-bold uppercase tracking-wider mt-0.5">
+                      Image attached — no embedded card data found
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (
@@ -390,9 +396,15 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                   <span className="text-[10px] font-mono text-zinc-400 block max-w-[180px] truncate">
                     {remakeFileName}
                   </span>
-                  <span className="text-[9px] font-mono text-emerald-400 block font-bold uppercase tracking-wider mt-0.5">
-                    Tavern Tag Loaded Successfully
-                  </span>
+                  {remakeExtractedName ? (
+                    <span className="text-[9px] font-mono text-emerald-400 block font-bold uppercase tracking-wider mt-0.5">
+                      Tavern Tag Loaded Successfully
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-mono text-zinc-500 block font-bold uppercase tracking-wider mt-0.5">
+                      Image attached — no embedded card data found
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (
@@ -472,7 +484,7 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
               <div className="grid grid-cols-4 gap-1.5">
                 {[
                   { id: "gemini", label: "Gemini", model: "gemini-3.5-flash" },
-                  { id: "openrouter", label: "OpenRouter", model: "anthropic/claude-3.5-sonnet" },
+                  { id: "openrouter", label: "OpenRouter", model: OPENROUTER_MODELS[0] },
                   { id: "openai", label: "OpenAI", model: "" },
                   { id: "custom", label: "Custom", model: "" },
                 ].map((p) => (
@@ -511,7 +523,7 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
                   placeholder={selectedProvider === "openai" ? "e.g. gpt-5.5" : selectedProvider === "custom" ? "e.g. meta-llama/Llama-3-8b" : "e.g. anthropic/claude-3.5-sonnet"}
-                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-350 focus:outline-none"
+                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none"
                 />
               ) : (
                 <select

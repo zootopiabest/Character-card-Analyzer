@@ -1,5 +1,11 @@
 import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "./types";
 
+// The AI occasionally omits a field; guard every nested access so a slightly
+// off response can never break the export buttons.
+function statLine(label: string, s?: { score?: number; level?: string; notes?: string }): string {
+  return `- **${label}**: ${s?.score ?? "?"}/10 (${s?.level ?? "N/A"}) - ${s?.notes ?? ""}\n`;
+}
+
 export function generateAuditMarkdown(data: AnalysisResult, characterName: string = "Character"): string {
   let md = `# Audit Report: ${characterName}\n\n`;
 
@@ -8,18 +14,21 @@ export function generateAuditMarkdown(data: AnalysisResult, characterName: strin
   md += `- **Verdict**: ${data.slopSummary}\n\n`;
 
   md += `## Core Analysis\n`;
-  md += `- **Creator Craft**: ${data.coreAnalysis.creatorCraft.score}/10 (${data.coreAnalysis.creatorCraft.level}) - ${data.coreAnalysis.creatorCraft.notes}\n`;
-  md += `- **Originality**: ${data.coreAnalysis.originality.score}/10 (${data.coreAnalysis.originality.level}) - ${data.coreAnalysis.originality.notes}\n`;
-  md += `- **Negative Space**: ${data.coreAnalysis.negativeSpace.score}/10 (${data.coreAnalysis.negativeSpace.level}) - ${data.coreAnalysis.negativeSpace.notes}\n`;
-  md += `- **Cohesion**: ${data.coreAnalysis.cohesion.score}/10 (${data.coreAnalysis.cohesion.level}) - ${data.coreAnalysis.cohesion.notes}\n`;
-  md += `- **Trope Usage**: ${data.coreAnalysis.tropeUsage.score}/10 (${data.coreAnalysis.tropeUsage.level}) - ${data.coreAnalysis.tropeUsage.notes}\n\n`;
+  md += statLine("Creator Craft", data.coreAnalysis?.creatorCraft);
+  md += statLine("Originality", data.coreAnalysis?.originality);
+  md += statLine("Negative Space", data.coreAnalysis?.negativeSpace);
+  md += statLine("Cohesion", data.coreAnalysis?.cohesion);
+  md += statLine("Trope Usage", data.coreAnalysis?.tropeUsage);
+  md += `\n`;
 
   md += `## Critical Assessment\n${data.criticalAssessment}\n\n`;
   md += `## Quippy Summary\n*${data.quippySellSummary}*\n\n`;
 
-  md += `## Profile Voice\n`;
-  md += `- **Format**: ${data.profileVoice.format}\n`;
-  md += `- **Evaluation**: ${data.profileVoice.evaluation}\n\n`;
+  if (data.profileVoice) {
+    md += `## Profile Voice\n`;
+    md += `- **Format**: ${data.profileVoice.format}\n`;
+    md += `- **Evaluation**: ${data.profileVoice.evaluation}\n\n`;
+  }
 
   if (data.exampleDialogue) {
     md += `## Example Dialogue\n`;
@@ -60,8 +69,8 @@ export function generateComparisonMarkdown(data: ComparisonResult): string {
   md += `## Overall Verdict\n`;
   md += `${data.comparison.overallVerdict}\n\n`;
   md += `### Scorecard\n`;
-  md += `- **Original Slop Score**: ${data.comparison.verdictScorecard.originalScore}/10\n`;
-  md += `- **Remake Slop Score**: ${data.comparison.verdictScorecard.remakeScore}/10\n\n`;
+  md += `- **Original Verdict Score**: ${data.comparison.verdictScorecard?.originalScore ?? "?"}/10\n`;
+  md += `- **Remake Verdict Score**: ${data.comparison.verdictScorecard?.remakeScore ?? "?"}/10\n\n`;
   md += `### Summary of Changes\n`;
   md += `${data.comparison.summaryOfChanges}\n\n`;
 
@@ -126,11 +135,11 @@ export function generateMultiCharMarkdown(data: MultiCharResult, characterName: 
   md += `- **Verdict**: ${data.slopSummary}\n\n`;
 
   md += `## World & System\n`;
-  md += `- **World Building Score**: ${data.worldAndSystemAnalysis.worldBuilding.score}/10\n`;
-  md += `- **World Building Notes**: ${data.worldAndSystemAnalysis.worldBuilding.notes}\n`;
-  md += `- **System Rules Score**: ${data.worldAndSystemAnalysis.systemRulesAdherence.score}/10\n`;
-  md += `- **System Rules Notes**: ${data.worldAndSystemAnalysis.systemRulesAdherence.notes}\n`;
-  md += `- **Lorebook Integration**: ${data.worldAndSystemAnalysis.lorebookIntegration}\n\n`;
+  md += `- **World Building Score**: ${data.worldAndSystemAnalysis?.worldBuilding?.score ?? "?"}/10\n`;
+  md += `- **World Building Notes**: ${data.worldAndSystemAnalysis?.worldBuilding?.notes ?? ""}\n`;
+  md += `- **System Rules Score**: ${data.worldAndSystemAnalysis?.systemRulesAdherence?.score ?? "?"}/10\n`;
+  md += `- **System Rules Notes**: ${data.worldAndSystemAnalysis?.systemRulesAdherence?.notes ?? ""}\n`;
+  md += `- **Lorebook Integration**: ${data.worldAndSystemAnalysis?.lorebookIntegration ?? ""}\n\n`;
 
   md += `## Character Assessments\n`;
   data.characterAssessments.forEach(c => {

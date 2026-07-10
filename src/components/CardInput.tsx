@@ -1,6 +1,6 @@
 import mammoth from 'mammoth';
 import React, { useState, useRef } from "react";
-import { Upload, FileImage, Sparkles, CheckCircle2, RotateCcw, AlertTriangle } from "lucide-react";
+import { Upload, Sparkles, CheckCircle2, RotateCcw } from "lucide-react";
 
 interface CardInputProps {
   onAnalyze: (
@@ -17,12 +17,16 @@ interface CardInputProps {
   ) => void;
   isLoading: boolean;
   onNameExtracted?: (name: string | null) => void;
+  // Multi-char mode reuses this panel but doesn't send the image to the AI,
+  // so it passes false to keep the upload copy honest.
+  supportsVisualAudit?: boolean;
 }
 
 import { buildDescriptionFromJson, decodeBase64UTF8, tryExtractCharaMetadata } from "../utils";
 import { OPENROUTER_MODELS } from "../data/models";
+import { PRESET_CHARACTERS } from "../data/examples";
 
-export default function CardInput({ onAnalyze, isLoading, onNameExtracted }: CardInputProps) {
+export default function CardInput({ onAnalyze, isLoading, onNameExtracted, supportsVisualAudit = true }: CardInputProps) {
   const [description, setDescription] = useState("");
   const [analyzerNotes, setAnalyzerNotes] = useState("");
   
@@ -287,56 +291,13 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                     {imageFileName || "character_art.png"}
                   </p>
                   <p className="text-[10px] text-zinc-500 leading-relaxed font-sans">
-                    Will compare descriptions directly with visual render features.
+                    {supportsVisualAudit
+                      ? "Will compare descriptions directly with visual render features."
+                      : "Embedded card text is extracted; the art itself isn't analyzed in this mode."}
                   </p>
                 </div>
-                
-          <div className="space-y-4 pt-2 border-t border-[#1A1A1A] animate-fadeIn mt-4 bg-[#0a0a0a] p-3 rounded-md border border-zinc-800/50 shadow-inner">
-            <div className="flex items-center justify-between pb-1">
-              <span className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-[#00F0FF] rounded-full inline-block animate-pulse"></span>
-                Reasoning / Thinking Mode
-              </span>
-              <label className="relative inline-flex items-center cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={thinkingMode}
-                  onChange={(e) => setThinkingMode(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-[#1A1A1A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-600 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#00F0FF]/30 peer-checked:after:bg-[#00F0FF] peer-checked:after:border-transparent"></div>
-              </label>
-            </div>
-            
-            {thinkingMode && (
-              <div className="space-y-1.5 pt-2 border-t border-[#1A1A1A]/50">
-                <label className="block text-[9px] font-mono font-bold tracking-widest text-[#444] uppercase mb-1.5 ml-0.5">
-                  Effort Level
-                </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {["low", "medium", "high"].map((level) => (
-                    <button
-                      type="button"
-                      key={level}
-                      onClick={() => setReasoningEffort(level)}
-                      className={`py-1.5 px-2.5 rounded text-[10px] font-mono text-center font-bold tracking-wider uppercase border transition-all ${
-                        reasoningEffort === level
-                          ? "bg-[#00F0FF]/10 border-[#00F0FF] text-[#00F0FF] shadow-[0_0_10px_rgba(0,240,255,0.15)]"
-                          : "bg-[#050505] border-[#1A1A1A] text-zinc-600 hover:text-zinc-400 hover:bg-[#0A0A0A] hover:border-zinc-800"
-                      }`}
-                    >
-                      {level}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[9px] text-[#555] font-mono mt-2 ml-0.5">
-                  Allocates more tokens to the model's scratchpad before answering.
-                </p>
-              </div>
-            )}
-          </div>
 
-        <button
+                <button
                   id="reset-image-btn"
                   type="button"
                   onClick={(e) => {
@@ -437,6 +398,82 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
           )}
         </div>
 
+        {/* Example card loader (demo cards for first-time users) */}
+        <div className="border border-[#1A1A1A] bg-[#050505] rounded-lg p-3 space-y-2">
+          <span className="text-[9px] font-mono text-[#555] uppercase font-bold block">
+            No card handy? Load a demo:
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+            {PRESET_CHARACTERS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => {
+                  setDescription(preset.description);
+                  setImageBase64(null);
+                  setImagePreview(null);
+                  setImageMimeType(null);
+                  setImageFileName(null);
+                  setShowExtractedBanner(false);
+                  setExtractedName(preset.name);
+                  onNameExtracted?.(preset.name);
+                  setShowBlueprintTextarea(true);
+                }}
+                title={preset.tagline}
+                className="py-1.5 px-2 rounded text-[9px] font-mono text-left font-bold tracking-wider uppercase border bg-[#0A0A0A] border-[#1A1A1A] text-zinc-500 hover:text-[#00F0FF] hover:border-[#00F0FF]/40 transition-colors"
+              >
+                {preset.tropeGroup}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Reasoning / Thinking Mode (applies to all analysis modes) */}
+        <div id="thinking-mode-panel" className="border border-[#1A1A1A] bg-[#050505] rounded-lg p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-[#00F0FF] rounded-full inline-block animate-pulse"></span>
+              Reasoning / Thinking Mode
+            </span>
+            <label className="relative inline-flex items-center cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={thinkingMode}
+                onChange={(e) => setThinkingMode(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-[#1A1A1A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-600 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#00F0FF]/30 peer-checked:after:bg-[#00F0FF] peer-checked:after:border-transparent"></div>
+            </label>
+          </div>
+
+          {thinkingMode && (
+            <div className="space-y-1.5 pt-2 border-t border-[#1A1A1A]/50 animate-fadeIn">
+              <label className="block text-[9px] font-mono font-bold tracking-widest text-[#444] uppercase mb-1.5 ml-0.5">
+                Effort Level
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {["low", "medium", "high"].map((level) => (
+                  <button
+                    type="button"
+                    key={level}
+                    onClick={() => setReasoningEffort(level)}
+                    className={`py-1.5 px-2.5 rounded text-[10px] font-mono text-center font-bold tracking-wider uppercase border transition-all ${
+                      reasoningEffort === level
+                        ? "bg-[#00F0FF]/10 border-[#00F0FF] text-[#00F0FF] shadow-[0_0_10px_rgba(0,240,255,0.15)]"
+                        : "bg-[#050505] border-[#1A1A1A] text-zinc-600 hover:text-zinc-400 hover:bg-[#0A0A0A] hover:border-zinc-800"
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[9px] text-[#555] font-mono mt-2 ml-0.5">
+                Allocates more tokens to the model's scratchpad before answering.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Custom Runner override section */}
         <div id="custom-runner-override" className="border border-[#1A1A1A] bg-[#050505] rounded-lg p-4 space-y-4">
           <div className="flex items-center justify-between">
@@ -485,7 +522,7 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
                     type="button"
                     onClick={() => {
                       setSelectedProvider("openrouter");
-                      setSelectedModel("anthropic/claude-3.5-sonnet");
+                      setSelectedModel(OPENROUTER_MODELS[0]);
                     }}
                     className={`py-1.5 px-2.5 rounded text-[10px] font-mono text-center font-bold tracking-wider uppercase border transition-colors ${
                       selectedProvider === "openrouter"

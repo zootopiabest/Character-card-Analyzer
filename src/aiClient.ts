@@ -50,13 +50,16 @@ function providerLabel(provider: string): string {
 // strings keep working across providers.
 function normalizeModel(model: string | null | undefined, provider: string): string {
   if (!model || !model.trim()) {
-    if (provider === "openrouter") return "Google/Gemini-3.5-flash";
+    if (provider === "openrouter") return "google/gemini-3.5-flash";
     if (provider === "openai") return "gpt-5.5";
     return "gemini-3.5-flash";
   }
   let m = model.trim();
   if (provider === "openrouter") {
-    if (m.toLowerCase().startsWith("gemini-")) m = "google/" + m;
+    // OpenRouter model slugs are all-lowercase and case-sensitive; fix up
+    // anything typed or saved with capital letters.
+    m = m.toLowerCase();
+    if (m.startsWith("gemini-")) m = "google/" + m;
   } else if (provider === "gemini") {
     m = m.replace(/^google\//i, "");
   }
@@ -115,7 +118,12 @@ async function callOpenAICompatible(
       ],
       ...(cfg.provider === "openai" && { response_format: { type: "json_object" } }),
       ...(cfg.thinkingMode && { reasoning_effort: cfg.reasoningEffort || "medium" }),
-      max_tokens: 8192,
+      // OpenAI's newer (reasoning) models reject the legacy `max_tokens` field
+      // and require `max_completion_tokens` instead. Reasoning tokens also
+      // count against this budget, so give OpenAI more headroom.
+      ...(cfg.provider === "openai"
+        ? { max_completion_tokens: 16384 }
+        : { max_tokens: 8192 }),
     }),
   });
 
@@ -149,7 +157,7 @@ async function callGemini(
   const model = normalizeModel(cfg.model, "gemini");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model
-  )}:generateContent?key=${encodeURIComponent(cfg.apiKey.trim())}`;
+  )}:generateContent`;
 
   const parts: any[] = [{ text: userText }];
   for (const img of images) {
@@ -158,7 +166,9 @@ async function callGemini(
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    // Send the key as a header rather than in the URL so it can't end up in
+    // request logs or browser history.
+    headers: { "Content-Type": "application/json", "x-goog-api-key": cfg.apiKey.trim() },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: SYSTEM_CONTENT[endpoint] }] },
       contents: [{ role: "user", parts }],
@@ -231,6 +241,10 @@ function normalizeResult(endpoint: EndpointType, d: any): any {
   const data = asObject(d);
   data.characterAssessments = asArray(data.characterAssessments);
   data.worldAndSystemAnalysis = asObject(data.worldAndSystemAnalysis);
+  data.worldAndSystemAnalysis.worldBuilding = asObject(data.worldAndSystemAnalysis.worldBuilding);
+  data.worldAndSystemAnalysis.systemRulesAdherence = asObject(
+    data.worldAndSystemAnalysis.systemRulesAdherence
+  );
   data.playScenarios = asObject(data.playScenarios);
   return data;
 }
@@ -250,7 +264,15 @@ async function run(
     cfg.provider === "gemini"
       ? await callGemini(endpoint, userText, images, cfg)
       : await callOpenAICompatible(endpoint, userText, images, cfg);
-  return normalizeResult(endpoint, safeParseJSON(raw));
+  let parsed: any;
+  try {
+    parsed = safeParseJSON(raw);
+  } catch {
+    throw new Error(
+      "The AI's reply came back incomplete or malformed — usually the response got cut off. Run it again; if it keeps happening, try a shorter card or a different model."
+    );
+  }
+  return normalizeResult(endpoint, parsed);
 }
 
 function analyzerNotesBlock(notes: string | null | undefined): string {
@@ -291,7 +313,10 @@ export function runGroup(
   return run("group", userText, [], cfg);
 }
 
-export function runMultichar(p: { description: string }, cfg: RunnerConfig): Promise<any> {
-  const userText = `MULTI-CHARACTER CARD DATA TO ANALYZE:\n\n${p.description}`;
+export function runMultichar(
+  p: { description: string; analyzerNotes?: string | null },
+  cfg: RunnerConfig
+): Promise<any> {
+  const userText = `MULTI-CHARACTER CARD DATA TO ANALYZE:\n\n${p.description}${analyzerNotesBlock(p.analyzerNotes)}`;
   return run("multichar", userText, [], cfg);
 }

@@ -1,9 +1,8 @@
-import React, { useState } from "react";
-import { Check, ShieldAlert, Award, AlertCircle, ArrowRight, Activity, TrendingUp, Sparkles, MessageSquare, Mic, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { Check, Award, AlertTriangle } from "lucide-react";
 import { ComparisonResult, AnalysisResult } from "../types";
 import ReviewStats from "./ReviewStats";
 import Observations from "./Observations";
-import VisualMatch from "./VisualMatch";
 
 interface ComparisonViewProps {
   comparisonData: ComparisonResult;
@@ -19,13 +18,14 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
     summaryOfChanges: "Changes couldn't be automatically tabulated.",
     whatImproved: [],
     whatRegressed: [],
-    verdictScorecard: { originalScore: 50, remakeScore: 50 }
+    verdictScorecard: { originalScore: 5, remakeScore: 5 }
   };
 
   const originalScore = original?.overallSlopScore ?? 50;
   const remakeScore = remake?.overallSlopScore ?? 50;
-  const scoreCard = comparison?.verdictScorecard || { originalScore: 50, remakeScore: 50 };
-  const scoreDiff = (scoreCard.remakeScore ?? 50) - (scoreCard.originalScore ?? 50);
+  // verdictScorecard is on a 0-10 scale (slop scores above are 0-100).
+  const scoreCard = comparison?.verdictScorecard || { originalScore: 5, remakeScore: 5 };
+  const scoreDiff = (scoreCard.remakeScore ?? 5) - (scoreCard.originalScore ?? 5);
 
   const originalSlopMeta = originalScore <= 25 ? "text-emerald-400 bg-emerald-950/20 border-emerald-500/20" : originalScore <= 60 ? "text-cyan-400 bg-cyan-950/20 border-cyan-500/20" : "text-yellow-400 bg-yellow-950/20 border-yellow-500/20";
   const remakeSlopMeta = remakeScore <= 25 ? "text-emerald-400 bg-emerald-950/20 border-emerald-500/20" : remakeScore <= 60 ? "text-cyan-400 bg-cyan-950/20 border-cyan-500/20" : "text-yellow-400 bg-yellow-950/20 border-yellow-500/20";
@@ -231,7 +231,7 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
                 </div>
                 <div className="space-y-1.5 pt-1">
                   <div className="text-[10px] font-bold text-[#00F0FF]">BIGGEST EXPLOIT HOLE:</div>
-                  <p className="text-[11px] leading-relaxed italic text-zinc-305 font-mono bg-black p-2 rounded border border-[#141414]">
+                  <p className="text-[11px] leading-relaxed italic text-zinc-300 font-mono bg-black p-2 rounded border border-[#141414]">
                     &ldquo;{remake.doesWorst}&rdquo;
                   </p>
                 </div>

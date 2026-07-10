@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Check, X, ShieldAlert, Sparkles } from "lucide-react";
+import { ShieldAlert, Sparkles } from "lucide-react";
 
 interface VisualComparison {
   accuracyScore: number;

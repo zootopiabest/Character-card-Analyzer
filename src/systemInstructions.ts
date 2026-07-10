@@ -390,13 +390,11 @@ Ephemeral portals (like dialog/greetings) fall out of context quickly. Moving lo
 SCORING CONSISTENCY & FAIRNESS (CRITICAL):
 Score each card on its own absolute merits, EXACTLY as you would if it were the only card in front of you. Do not grade on a curve relative to the other card: a weak card next to a worse one is still weak, and a strong card next to a better one is still strong.
 The "Original" and "Remake" labels are positional only. They do NOT imply which card is better, newer, or improved. Do not assume the remake is an upgrade. If the remake is worse than the original, say so plainly and score it lower.
-Each card's overallSlopScore and coreAnalysis sub-scores must reflect that card alone. The verdictScorecard (originalScore vs remakeScore) is a separate, relative judgment, but it MUST stay consistent with the per-card analyses: the card with less slop and the stronger coreAnalysis must receive the higher verdict score. Never let the verdict contradict the individual card scores.
+Each card's overallSlopScore and coreAnalysis sub-scores must reflect that card alone. The verdictScorecard (originalScore vs remakeScore, each on a 0-10 scale) is a separate, relative judgment, but it MUST stay consistent with the per-card analyses: the card with less slop and the stronger coreAnalysis must receive the higher verdict score. Never let the verdict contradict the individual card scores.
 
 ` + SHARED_RUBRIC + `
 
 BEHAVIOR & IMMERSION DETAILS: Provide doesBest, doesWorst, datingProfile, and walmartRun (retail store trip) for both versions, showing any shift in capabilities or personality quirks caused by the rewrite.
-IF AN IMAGE IS PROVIDED:
-Compare the image to the text description. Judge hairstyle, colors, body type, clothing, accessories, expression, species traits, and overall vibe. Score visual accuracy 0-100. If no image is provided, leave visualComparison null.
 
 Tone: Be highly cynical, witty, sardonic, extremely direct, and brutally honest but deeply insightful about how the rewrite impacts production. Keep each text field concise — aim for 2-4 sharp sentences — so the full JSON fits comfortably in the response. Favor specific, cutting insight over length.
 
@@ -554,8 +552,8 @@ export const compareSchemaPrompt = `\n\nYour entire output must be a single vali
     "whatImproved": ["Bullet detail of improvement 1", "Bullet detail of improvement 2"],
     "whatRegressed": ["Bullet detail of regression 1", "Bullet detail of regression 2"],
     "verdictScorecard": {
-      "originalScore": 75,
-      "remakeScore": 85
+      "originalScore": 6,
+      "remakeScore": 8
     }
   }
 }`;

@@ -163,8 +163,8 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
       return;
     }
     
-    const characters = members.map(m => ({
-      name: m.name || `Character ${m.id}`,
+    const characters = members.map((m, i) => ({
+      name: m.name || `Character ${i + 1}`,
       description: m.description
     }));
 
@@ -285,7 +285,7 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
           <div className="grid grid-cols-4 gap-1.5">
             {[
               { id: "gemini", label: "Gemini", model: "gemini-3.5-flash" },
-              { id: "openrouter", label: "OpenRouter", model: "anthropic/claude-3.5-sonnet" },
+              { id: "openrouter", label: "OpenRouter", model: OPENROUTER_MODELS[0] },
               { id: "openai", label: "OpenAI", model: "" },
               { id: "custom", label: "Custom", model: "" },
             ].map((p) => (
@@ -327,7 +327,7 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
                   placeholder={selectedProvider === "openai" ? "e.g. gpt-5.5" : selectedProvider === "custom" ? "e.g. meta-llama/Llama-3-8b" : "e.g. anthropic/claude-3.5-sonnet"}
-                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-350 focus:outline-none"
+                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none"
                 />
               ) : (
                 <select

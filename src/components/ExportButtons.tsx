@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Download, FileJson, FileText, ChevronDown } from "lucide-react";
 import { downloadFile, generateAuditMarkdown, generateComparisonMarkdown, generateGroupMarkdown, generateMultiCharMarkdown } from "../exportUtils";
 import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "../types";

@@ -35,7 +35,7 @@ export default function App() {
     "Scanning negative space configuration and blank token densities...",
     "Evaluating trope mechanics against 100k roleplay datasets...",
     "Executing syntactic slop filters on narrative writing patterns...",
-    "Rasterizing visual character art and comparing pixel structures to prompt strings...",
+    "Cross-referencing trope signatures against archetype heuristics...",
     "Assembling diagnostic scorecards and baking sardonic feedback..."
   ];
 
@@ -212,7 +212,7 @@ export default function App() {
                 <span className="text-xs font-bold text-zinc-200">Non-Academic Instruction Auditor</span>
               </div>
               <p className="text-[11px] text-zinc-400 leading-relaxed max-w-5xl">
-                Evaluating instruction templates for raw **LLM Playability**. Safe space for benign character quirks & trope setups as long as they guide behavior models efficiently without introducing AI placeholder formatting or word redundancy.
+                Evaluating instruction templates for raw LLM playability. Safe space for benign character quirks & trope setups as long as they guide behavior models efficiently without introducing AI placeholder formatting or word redundancy.
               </p>
             </div>
 

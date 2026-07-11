@@ -1,8 +1,7 @@
-import mammoth from 'mammoth';
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { Upload, X, Plus } from "lucide-react";
-import { tryExtractCharaMetadata, buildDescriptionFromJson } from "../utils";
-import { OPENROUTER_MODELS } from "../data/models";
+import { readCardFile } from "../utils";
+import ModelSettingsPanel, { useModelSettings } from "./ModelSettings";
 
 interface GroupInputProps {
   onAnalyze: (
@@ -30,22 +29,8 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
     { id: "2", name: "", description: "", previewUrl: null },
   ]);
 
-  // Settings are shared with the other modes via the same localStorage keys,
-  // so the user enters their API key once and it works everywhere.
-  const [selectedProvider, setSelectedProvider] = useState<string>(
-    () => localStorage.getItem("loresieve_selected_provider") || "gemini"
-  );
-  const [selectedModel, setSelectedModel] = useState(
-    () => localStorage.getItem("loresieve_selected_model") || "gemini-3.5-flash"
-  );
-  const [isManualModel, setIsManualModel] = useState(false);
-  const [showKey, setShowKey] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState(
-    () => localStorage.getItem("loresieve_custom_api_key") || ""
-  );
-  const [customBaseUrl, setCustomBaseUrl] = useState(
-    () => localStorage.getItem("loresieve_custom_base_url") || ""
-  );
+  // Shared provider/model/key/thinking settings (persisted as they change).
+  const settings = useModelSettings();
 
   const addMember = () => {
     setMembers([
@@ -67,93 +52,30 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
   };
 
   const handleFileChange = (id: string, file: File) => {
-    if (file.type === "application/json" || file.name.toLowerCase().endsWith(".json")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const result = e.target?.result as string;
-          const data = JSON.parse(result);
-          const extracted = buildDescriptionFromJson(data);
-          if (extracted) {
-            setMembers((prev) =>
-              prev.map((m) =>
-                m.id === id
-                  ? {
-                      ...m,
-                      name: extracted.name || m.name || "JSON Character",
-                      description: extracted.description || m.description,
-                    }
-                  : m
-              )
-            );
-          }
-        } catch (error) {
-          alert("Failed to parse JSON file.");
-        }
-      };
-      reader.readAsText(file);
-    
-    } else if (file.name.toLowerCase().endsWith(".txt") || file.name.toLowerCase().endsWith(".md") || file.name.toLowerCase().endsWith(".rtf") || file.type === "text/plain" || file.type === "text/markdown") {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
+    readCardFile(file, {
+      onText: ({ text, name, source }) => {
         setMembers((prev) =>
           prev.map((m) =>
-            m.id === id ? { ...m, description: text } : m
+            m.id === id
+              ? {
+                  ...m,
+                  description: text,
+                  name:
+                    source === "json" || source === "png-embedded"
+                      ? name || m.name || "Embedded Character"
+                      : m.name,
+                }
+              : m
           )
         );
-      };
-      reader.readAsText(file);
-    } else if (file.name.toLowerCase().endsWith(".docx") || file.name.toLowerCase().endsWith(".doc")) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const arrayBuffer = e.target?.result as ArrayBuffer;
-        try {
-          const result = await mammoth.extractRawText({ arrayBuffer });
-          setMembers((prev) =>
-            prev.map((m) =>
-              m.id === id ? { ...m, description: result.value } : m
-            )
-          );
-        } catch (error) {
-          alert("Failed to read document.");
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
+      },
+      onImage: ({ dataUrl }) => {
         setMembers((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, previewUrl: result } : m))
+          prev.map((m) => (m.id === id ? { ...m, previewUrl: dataUrl } : m))
         );
-      };
-      reader.readAsDataURL(file);
-
-      if (file.type === "image/png" || file.name.toLowerCase().endsWith(".png")) {
-        const bufferReader = new FileReader();
-        bufferReader.onload = (e) => {
-          if (e.target?.result) {
-            const buffer = e.target.result as ArrayBuffer;
-            const extracted = tryExtractCharaMetadata(buffer);
-            if (extracted) {
-              setMembers((prev) =>
-                prev.map((m) =>
-                  m.id === id
-                    ? {
-                        ...m,
-                        name: extracted.name || m.name || "Embedded Character",
-                        description: extracted.description || m.description,
-                      }
-                    : m
-                )
-              );
-            }
-          }
-        };
-        bufferReader.readAsArrayBuffer(file);
-      }
-    }
+      },
+      onError: (msg) => alert(msg),
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -162,30 +84,20 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
       alert("Please provide instructions/description for all characters in the group.");
       return;
     }
-    
+
     const characters = members.map((m, i) => ({
       name: m.name || `Character ${i + 1}`,
       description: m.description
     }));
 
-    // Persist to the shared settings so other modes pick up the same key/model.
-    localStorage.setItem("loresieve_selected_provider", selectedProvider);
-    localStorage.setItem("loresieve_custom_api_key", customApiKey);
-    localStorage.setItem("loresieve_custom_base_url", customBaseUrl);
-    localStorage.setItem("loresieve_selected_model", selectedModel);
-
-    // Respect the thinking-mode choice set in the other modes.
-    const thinkingMode = localStorage.getItem("loresieve_thinking_mode") === "true";
-    const reasoningEffort = localStorage.getItem("loresieve_reasoning_effort") || "medium";
-
     onAnalyze(
       characters,
-      customApiKey.trim() || null,
-      selectedModel,
-      selectedProvider,
-      customBaseUrl.trim() || null,
-      thinkingMode,
-      reasoningEffort
+      settings.apiKey.trim() || null,
+      settings.model,
+      settings.provider,
+      settings.baseUrl.trim() || null,
+      settings.thinkingMode,
+      settings.reasoningEffort
     );
   };
 
@@ -264,9 +176,9 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
             </div>
           </div>
         ))}
-        
+
         {members.length < 8 && (
-          <div 
+          <div
             onClick={addMember}
             className="bg-[#0A0A0A] border border-[#1A1A1A] border-dashed rounded p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-[#111] hover:border-[#00F0FF]/30 transition-all text-zinc-500 hover:text-[#00F0FF] group"
           >
@@ -278,118 +190,8 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
         )}
       </div>
 
-      <div className="bg-[#0F0F0F] border border-[#222] p-4 rounded space-y-4">
-        {/* Provider selector (shared with the other modes) */}
-        <div className="space-y-1.5 pb-3 border-b border-[#222]">
-          <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Provider</label>
-          <div className="grid grid-cols-4 gap-1.5">
-            {[
-              { id: "gemini", label: "Gemini", model: "gemini-3.5-flash" },
-              { id: "openrouter", label: "OpenRouter", model: OPENROUTER_MODELS[0] },
-              { id: "openai", label: "OpenAI", model: "" },
-              { id: "custom", label: "Custom", model: "" },
-            ].map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => {
-                  setSelectedProvider(p.id);
-                  setSelectedModel(p.model);
-                }}
-                className={`py-1.5 px-2 rounded text-[9px] font-mono text-center font-bold tracking-wider uppercase border transition-colors ${
-                  selectedProvider === p.id
-                    ? "bg-[#0A0A0A] border-[#00F0FF] text-white"
-                    : "bg-black border-[#222] text-zinc-500 hover:text-zinc-300 hover:bg-[#0A0A0A]"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Same config inputs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Active LLM Model</label>
-              {selectedProvider !== "gemini" && (
-                <label className="flex items-center gap-1.5 text-[9px] font-mono text-zinc-400 cursor-pointer">
-                  <input type="checkbox" checked={isManualModel} onChange={(e) => setIsManualModel(e.target.checked)} className="rounded border-[#222] bg-black text-[#00F0FF] focus:ring-0" />
-                  ENTER MANUALLY
-                </label>
-              )}
-            </div>
-            {selectedProvider !== "gemini" ? (
-              isManualModel || selectedProvider === "custom" ? (
-                <input
-                  type="text"
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  placeholder={selectedProvider === "openai" ? "e.g. gpt-5.5" : selectedProvider === "custom" ? "e.g. meta-llama/Llama-3-8b" : "e.g. anthropic/claude-3.5-sonnet"}
-                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none"
-                />
-              ) : (
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none cursor-pointer"
-                >
-                  {OPENROUTER_MODELS.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              )
-            ) : (
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none cursor-pointer"
-              >
-                <option value="gemini-3.5-flash">gemini-3.5-flash // Balanced and Ultra-Fast</option>
-                <option value="gemini-2.5-pro">gemini-2.5-pro // Analytical Logic</option>
-              </select>
-            )}
-          </div>
-        </div>
-
-        <div className={`grid grid-cols-1 ${selectedProvider === "custom" ? "md:grid-cols-2" : ""} gap-4`}>
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">
-                {selectedProvider === "custom" ? "API Key" : "Secret Credentials / API Token"}
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="text-[#00F0FF] text-[9px] font-mono uppercase tracking-widest hover:underline"
-              >
-                {showKey ? "Hide" : "Reveal"}
-              </button>
-            </div>
-            <input
-              type={showKey ? "text" : "password"}
-              value={customApiKey}
-              onChange={(e) => setCustomApiKey(e.target.value)}
-              placeholder={selectedProvider === "openrouter" ? "OpenRouter sk-or-... api key" : selectedProvider === "openai" ? "OpenAI sk-proj-... api key" : selectedProvider === "custom" ? "sk-..." : "AI Studio GEMINI_API_KEY"}
-              className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-[#00F0FF] placeholder-zinc-700 focus:outline-none"
-            />
-          </div>
-
-          {selectedProvider === "custom" && (
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Base URL</label>
-              <input
-                type="text"
-                value={customBaseUrl}
-                onChange={(e) => setCustomBaseUrl(e.target.value)}
-                placeholder="e.g. http://localhost:11434/v1"
-                className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-[#00F0FF] placeholder-zinc-700 focus:outline-none"
-              />
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Shared Model & API Key settings (provider, model, key, thinking mode) */}
+      <ModelSettingsPanel s={settings} />
 
       <button
         type="submit"

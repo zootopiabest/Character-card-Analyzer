@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, FileJson, FileText, ChevronDown } from "lucide-react";
+import { Download, FileJson, FileText, ChevronDown, Clipboard, Check } from "lucide-react";
 import { downloadFile, generateAuditMarkdown, generateComparisonMarkdown, generateGroupMarkdown, generateMultiCharMarkdown } from "../exportUtils";
 import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "../types";
 
@@ -11,6 +11,14 @@ interface ExportButtonsProps {
 
 export default function ExportButtons({ data, type, charName }: ExportButtonsProps) {
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const buildMarkdown = (): string => {
+    if (type === "audit") return generateAuditMarkdown(data as AnalysisResult, charName);
+    if (type === "comparison") return generateComparisonMarkdown(data as ComparisonResult);
+    if (type === "group") return generateGroupMarkdown(data as GroupResult);
+    return generateMultiCharMarkdown(data as MultiCharResult, charName);
+  };
 
   const handleExportJson = () => {
     const jsonStr = JSON.stringify(data, null, 2);
@@ -19,18 +27,23 @@ export default function ExportButtons({ data, type, charName }: ExportButtonsPro
   };
 
   const handleExportMd = () => {
-    let md = "";
-    if (type === "audit") {
-      md = generateAuditMarkdown(data as AnalysisResult, charName);
-    } else if (type === "comparison") {
-      md = generateComparisonMarkdown(data as ComparisonResult);
-    } else if (type === "group") {
-      md = generateGroupMarkdown(data as GroupResult);
-    } else if (type === "multichar") {
-      md = generateMultiCharMarkdown(data as MultiCharResult, charName);
-    }
-    downloadFile(md, `report_${type}_${Date.now()}.md`, "text/markdown");
+    downloadFile(buildMarkdown(), `report_${type}_${Date.now()}.md`, "text/markdown");
     setOpen(false);
+  };
+
+  // File downloads can silently fail inside a mobile WebView (the Android
+  // app), so clipboard copy is the reliable path there.
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildMarkdown());
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setOpen(false);
+      }, 1200);
+    } catch {
+      alert("Couldn't access the clipboard. Try the Markdown download instead.");
+    }
   };
 
   return (
@@ -52,6 +65,21 @@ export default function ExportButtons({ data, type, charName }: ExportButtonsPro
           />
           <div className="absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-[#0A0A0A] ring-1 ring-white/10 z-50 overflow-hidden border border-[#222]">
             <div className="py-1" role="menu" aria-orientation="vertical">
+              <button
+                onClick={handleCopy}
+                className="w-full text-left px-4 py-2 text-[11px] font-mono whitespace-nowrap text-zinc-300 hover:bg-[#1A1A1A] hover:text-white flex items-center gap-2 border-b border-[#1A1A1A]"
+                role="menuitem"
+              >
+                {copied ? (
+                  <>
+                    <Check size={14} className="text-emerald-400" /> Copied!
+                  </>
+                ) : (
+                  <>
+                    <Clipboard size={14} className="text-emerald-400" /> Copy report
+                  </>
+                )}
+              </button>
               <button
                 onClick={handleExportMd}
                 className="w-full text-left px-4 py-2 text-[11px] font-mono whitespace-nowrap text-zinc-300 hover:bg-[#1A1A1A] hover:text-white flex items-center gap-2 border-b border-[#1A1A1A]"

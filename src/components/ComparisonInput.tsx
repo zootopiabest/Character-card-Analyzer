@@ -1,7 +1,7 @@
-import mammoth from 'mammoth';
 import React, { useState, useRef } from "react";
 import { Upload, CheckCircle2, RotateCcw, ArrowRightLeft } from "lucide-react";
-import { OPENROUTER_MODELS } from "../data/models";
+import { readCardFile } from "../utils";
+import ModelSettingsPanel, { useModelSettings } from "./ModelSettings";
 
 interface ComparisonInputProps {
   onCompare: (
@@ -20,8 +20,6 @@ interface ComparisonInputProps {
   ) => void;
   isLoading: boolean;
 }
-
-import { buildDescriptionFromJson, decodeBase64UTF8, tryExtractCharaMetadata } from "../utils";
 
 export default function ComparisonInput({ onCompare, isLoading }: ComparisonInputProps) {
   // Original states
@@ -44,44 +42,13 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
   const [remakeManualOpen, setRemakeManualOpen] = useState(false);
   const [remakeIsDragging, setRemakeIsDragging] = useState(false);
 
-  // Custom configuration states
-  
-const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
-    return localStorage.getItem("loresieve_use_custom") !== "false";
-  });
-  const [thinkingMode, setThinkingMode] = useState<boolean>(() => {
-    return localStorage.getItem("loresieve_thinking_mode") === "true";
-  });
-  const [reasoningEffort, setReasoningEffort] = useState<string>(() => {
-    return localStorage.getItem("loresieve_reasoning_effort") || "medium";
-  });
-
-  const [selectedProvider, setSelectedProvider] = useState<string>(() => {
-    return localStorage.getItem("loresieve_selected_provider") || "gemini";
-  });
-  const [customApiKey, setCustomApiKey] = useState<string>(() => {
-    return localStorage.getItem("loresieve_custom_api_key") || "";
-  });
-  const [customBaseUrl, setCustomBaseUrl] = useState<string>(() => {
-    return localStorage.getItem("loresieve_custom_base_url") || "";
-  });
-  const [selectedModel, setSelectedModel] = useState<string>(() => {
-    return localStorage.getItem("loresieve_selected_model") || "gemini-3.5-flash";
-  });
-  const [isManualModel, setIsManualModel] = useState(false);
-  const [showKey, setShowKey] = useState(false);
+  // Shared provider/model/key/thinking settings (persisted as they change).
+  const settings = useModelSettings();
 
   const origInputRef = useRef<HTMLInputElement>(null);
   const remakeInputRef = useRef<HTMLInputElement>(null);
 
   const processFile = (file: File, isOriginal: boolean) => {
-    if (!file) return;
-
-    if (file.size > 15 * 1024 * 1024) {
-      alert("File size exceeds 15MB limit.");
-      return;
-    }
-
     const setFileName = isOriginal ? setOrigFileName : setRemakeFileName;
     const setImgPreview = isOriginal ? setOrigImgPreview : setRemakeImgPreview;
     const setImgBase64 = isOriginal ? setOrigImgBase64 : setRemakeImgBase64;
@@ -91,79 +58,20 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
 
     setFileName(file.name);
 
-    if (file.type === "application/json" || file.name.toLowerCase().endsWith(".json")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const result = e.target?.result as string;
-          const data = JSON.parse(result);
-          const extracted = buildDescriptionFromJson(data);
-          if (extracted) {
-            setExtractedName(extracted.name || (isOriginal ? "Original Character" : "Remade Character"));
-            if (extracted.description) {
-              setDesc(extracted.description);
-            }
-          }
-        } catch (error) {
-          alert("Failed to parse JSON file.");
-        }
-      };
-      reader.readAsText(file);
-    
-    } else if (file.name.toLowerCase().endsWith(".txt") || file.name.toLowerCase().endsWith(".md") || file.name.toLowerCase().endsWith(".rtf") || file.type === "text/plain" || file.type === "text/markdown") {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
+    readCardFile(file, {
+      onText: ({ text, name, source }) => {
         setDesc(text);
-      };
-      reader.readAsText(file);
-    } else if (file.name.toLowerCase().endsWith(".docx") || file.name.toLowerCase().endsWith(".doc")) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const arrayBuffer = e.target?.result as ArrayBuffer;
-        try {
-          const result = await mammoth.extractRawText({ arrayBuffer });
-          setDesc(result.value);
-        } catch (error) {
-          alert("Failed to read document.");
+        if (source === "json" || source === "png-embedded") {
+          setExtractedName(name || (isOriginal ? "Original Character" : "Remade Character"));
         }
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
-      // Read image preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setImgPreview(result);
-        const commaIndex = result.indexOf(",");
-        if (commaIndex !== -1) {
-          setImgBase64(result.substring(commaIndex + 1));
-          const mimeTypeMatch = result.match(/^data:(image\/[a-zA-Z+.-]+);base64,/);
-          if (mimeTypeMatch) {
-            setImgMimeType(mimeTypeMatch[1]);
-          }
-        }
-      };
-      reader.readAsDataURL(file);
-
-      // Extract Tavern metadata if PNG
-      if (file.type === "image/png" || file.name.toLowerCase().endsWith(".png")) {
-        const bufferReader = new FileReader();
-        bufferReader.onload = (e) => {
-          if (e.target?.result) {
-            const buffer = e.target.result as ArrayBuffer;
-            const extracted = tryExtractCharaMetadata(buffer);
-            if (extracted) {
-              setExtractedName(extracted.name || (isOriginal ? "Original Character" : "Remade Character"));
-              if (extracted.description) {
-                setDesc(extracted.description);
-              }
-            }
-          }
-        };
-        bufferReader.readAsArrayBuffer(file);
-      }
-    }
+      },
+      onImage: ({ dataUrl, base64, mimeType }) => {
+        setImgPreview(dataUrl);
+        setImgBase64(base64);
+        setImgMimeType(mimeType);
+      },
+      onError: (msg) => alert(msg),
+    });
   };
 
   const origReset = () => {
@@ -203,14 +111,6 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
       return;
     }
 
-    localStorage.setItem("loresieve_use_custom", useCustomSettings ? "true" : "false");
-    localStorage.setItem("loresieve_selected_provider", selectedProvider);
-    localStorage.setItem("loresieve_custom_api_key", customApiKey);
-    localStorage.setItem("loresieve_thinking_mode", thinkingMode ? "true" : "false");
-    localStorage.setItem("loresieve_reasoning_effort", reasoningEffort);
-    localStorage.setItem("loresieve_custom_base_url", customBaseUrl);
-    localStorage.setItem("loresieve_selected_model", selectedModel);
-
     // BYOK: always pass the entered key/model/provider; the panel only shows/hides
     // these fields and must never null the key (no server fallback exists).
     onCompare(
@@ -220,16 +120,19 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
       origImgMimeType,
       remakeImgBase64,
       remakeImgMimeType,
-      customApiKey,
-      selectedModel,
-      selectedProvider,
-      customBaseUrl, thinkingMode, reasoningEffort);
+      settings.apiKey,
+      settings.model,
+      settings.provider,
+      settings.baseUrl,
+      settings.thinkingMode,
+      settings.reasoningEffort
+    );
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
+
         {/* COLUMN 1: ORIGINAL CARD */}
         <div className="border border-[#1E1E1E] bg-[#080808] p-5 rounded-xl space-y-4">
           <div className="flex items-center justify-between border-b border-[#1E1E1E] pb-2">
@@ -460,130 +363,8 @@ const [useCustomSettings, setUseCustomSettings] = useState<boolean>(() => {
 
       </div>
 
-      {/* CUSTOM OVERRIDE OPTIONS (Collapsible) */}
-      <div className="border border-[#1E1E1E] bg-[#0A0A0A] rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="custom-override-chk"
-              checked={useCustomSettings}
-              onChange={(e) => setUseCustomSettings(e.target.checked)}
-              className="rounded border-[#333] bg-black text-[#00F0FF] focus:ring-0 w-3.5 h-3.5 accent-[#00F0FF]"
-            />
-            <label htmlFor="custom-override-chk" className="text-[10px] font-mono font-bold text-zinc-300 cursor-pointer uppercase tracking-wider">
-              Activate Custom Runner Overrides (API keys, provider or alternative models)
-            </label>
-          </div>
-        </div>
-
-        {useCustomSettings && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-[#1E1E1E] animate-fadeIn">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Provider</label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {[
-                  { id: "gemini", label: "Gemini", model: "gemini-3.5-flash" },
-                  { id: "openrouter", label: "OpenRouter", model: OPENROUTER_MODELS[0] },
-                  { id: "openai", label: "OpenAI", model: "" },
-                  { id: "custom", label: "Custom", model: "" },
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedProvider(p.id);
-                      setSelectedModel(p.model);
-                    }}
-                    className={`py-1.5 px-2 rounded text-[9px] font-mono text-center font-bold tracking-wider uppercase border transition-colors ${
-                      selectedProvider === p.id
-                        ? "bg-[#0A0A0A] border-[#00F0FF] text-white"
-                        : "bg-black border-[#222] text-zinc-500 hover:text-zinc-300 hover:bg-[#0A0A0A]"
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-              <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Active LLM Model</label>
-              {selectedProvider !== "gemini" && (
-                <label className="flex items-center gap-1.5 text-[9px] font-mono text-zinc-400 cursor-pointer">
-                  <input type="checkbox" checked={isManualModel} onChange={(e) => setIsManualModel(e.target.checked)} className="rounded border-[#222] bg-black text-[#00F0FF] focus:ring-0" />
-                  ENTER MANUALLY
-                </label>
-              )}
-            </div>
-            {selectedProvider !== "gemini" ? (
-              isManualModel || selectedProvider === "custom" ? (
-                <input
-                  type="text"
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  placeholder={selectedProvider === "openai" ? "e.g. gpt-5.5" : selectedProvider === "custom" ? "e.g. meta-llama/Llama-3-8b" : "e.g. anthropic/claude-3.5-sonnet"}
-                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none"
-                />
-              ) : (
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none cursor-pointer"
-                >
-                  {OPENROUTER_MODELS.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              )
-            ) : (
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-zinc-300 focus:outline-none cursor-pointer"
-              >
-                <option value="gemini-3.5-flash">gemini-3.5-flash // Balanced and Ultra-Fast</option>
-                <option value="gemini-2.5-pro">gemini-2.5-pro // Analytical Logic</option>
-              </select>
-            )}
-          </div>
-
-          <div className={`col-span-1 ${selectedProvider === "custom" ? "md:col-span-1" : "md:col-span-2"} space-y-1.5`}>
-              <div className="flex items-center justify-between">
-                <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">
-                  {selectedProvider === "custom" ? "API Key" : "Secret Credentials / API Authorization Token"}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="text-[9px] font-mono text-zinc-500 hover:text-zinc-300"
-                >
-                  {showKey ? "MASK_CREDENTIAL" : "UNMASK_CREDENTIAL"}
-                </button>
-              </div>
-              <input
-                type={showKey ? "text" : "password"}
-                value={customApiKey}
-                onChange={(e) => setCustomApiKey(e.target.value)}
-                placeholder={selectedProvider === "openrouter" ? "OpenRouter sk-or-... api key" : selectedProvider === "openai" ? "OpenAI sk-proj-... api key" : selectedProvider === "custom" ? "sk-..." : "AI Studio GEMINI_API_KEY"}
-                className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-[#00F0FF] placeholder-zinc-700 focus:outline-none"
-              />
-            </div>
-            {selectedProvider === "custom" && (
-              <div className="space-y-1.5 col-span-1 md:col-span-1">
-                <label className="text-[9px] font-mono text-[#555] uppercase block font-bold">Base URL</label>
-                <input
-                  type="text"
-                  value={customBaseUrl}
-                  onChange={(e) => setCustomBaseUrl(e.target.value)}
-                  placeholder="e.g. http://localhost:11434/v1"
-                  className="w-full text-xs font-mono bg-black border border-[#222] p-2 rounded text-[#00F0FF] placeholder-zinc-700 focus:outline-none"
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Shared Model & API Key settings (provider, model, key, thinking mode) */}
+      <ModelSettingsPanel s={settings} />
 
       {/* TRIGGER ACTION */}
       <button

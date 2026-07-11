@@ -9,7 +9,7 @@ key**. Nothing runs in the background and no key is ever shipped inside the app.
 
 Supported providers: **Google Gemini**, **OpenRouter**, **OpenAI**, and any
 **custom** OpenAI-compatible endpoint. You enter your key in the app under
-"Custom Runner Override".
+"Model & API Key Settings".
 
 ---
 

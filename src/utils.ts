@@ -194,6 +194,113 @@ export function tryExtractCharaMetadata(arrayBuffer: ArrayBuffer): { name?: stri
   return null;
 }
 
+// Shared card-file reader used by all three input panels (single, comparison,
+// group) so the JSON / .txt / .docx / PNG-metadata handling can't drift apart.
+export interface CardFileCallbacks {
+  // Fired when readable card text is available. `source` tells the caller how
+  // it was obtained so it can decide what else to reset (e.g. a JSON upload
+  // should clear any previously attached art, a PNG keeps its own image).
+  onText?: (r: {
+    text: string;
+    name?: string;
+    source: "json" | "text" | "docx" | "png-embedded";
+  }) => void;
+  // Fired for image files with the preview/data payload.
+  onImage?: (r: { dataUrl: string; base64: string; mimeType: string }) => void;
+  onError?: (message: string) => void;
+}
+
+export function readCardFile(file: File, cb: CardFileCallbacks): void {
+  if (!file) return;
+
+  if (file.size > 15 * 1024 * 1024) {
+    cb.onError?.("File size exceeds 15MB limit. Please attach a smaller file.");
+    return;
+  }
+
+  const lower = file.name.toLowerCase();
+
+  if (file.type === "application/json" || lower.endsWith(".json")) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        const extracted = buildDescriptionFromJson(data);
+        if (extracted && extracted.description) {
+          cb.onText?.({ text: extracted.description, name: extracted.name, source: "json" });
+        }
+      } catch {
+        cb.onError?.("Failed to parse JSON file.");
+      }
+    };
+    reader.readAsText(file);
+    return;
+  }
+
+  if (
+    lower.endsWith(".txt") || lower.endsWith(".md") || lower.endsWith(".rtf") ||
+    file.type === "text/plain" || file.type === "text/markdown"
+  ) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      cb.onText?.({ text: e.target?.result as string, source: "text" });
+    };
+    reader.readAsText(file);
+    return;
+  }
+
+  if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const mammoth = await import("mammoth");
+        const result = await mammoth.extractRawText({
+          arrayBuffer: e.target?.result as ArrayBuffer,
+        });
+        cb.onText?.({ text: result.value, source: "docx" });
+      } catch {
+        cb.onError?.("Failed to read document.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+
+  // Everything else is treated as an image.
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target?.result as string;
+    const commaIndex = dataUrl.indexOf(",");
+    if (commaIndex !== -1) {
+      const mimeTypeMatch = dataUrl.match(/^data:(image\/[a-zA-Z+.-]+);base64,/);
+      cb.onImage?.({
+        dataUrl,
+        base64: dataUrl.substring(commaIndex + 1),
+        mimeType: mimeTypeMatch ? mimeTypeMatch[1] : file.type || "image/png",
+      });
+    }
+  };
+  reader.readAsDataURL(file);
+
+  // PNGs may carry an embedded SillyTavern character card.
+  if (file.type === "image/png" || lower.endsWith(".png")) {
+    const bufferReader = new FileReader();
+    bufferReader.onload = (e) => {
+      if (e.target?.result) {
+        const extracted = tryExtractCharaMetadata(e.target.result as ArrayBuffer);
+        if (extracted && extracted.description) {
+          cb.onText?.({
+            text: extracted.description,
+            name: extracted.name,
+            source: "png-embedded",
+          });
+        }
+      }
+    };
+    bufferReader.readAsArrayBuffer(file);
+  }
+}
+
 export function safeParseJSON(text: string): any {
   if (!text || typeof text !== "string") {
     throw new Error("No text provided to JSON parser.");

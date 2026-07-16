@@ -41,7 +41,18 @@ Provider-specific quirks live **only** here and must stay there:
 
 ### The prompts (`src/systemInstructions.ts`)
 
-The grading rubric is a single `SHARED_RUBRIC` constant composed into all four `*SystemInstruction` exports, so a rubric change applies to every mode at once — **keep it that way; do not fork per-mode copies.** Each mode also has a `*SchemaPrompt` (the exact JSON shape demanded of the model). `aiClient.ts` concatenates `systemInstruction + schemaPrompt` per endpoint. If you change a schema prompt, update the matching TypeScript interface in `src/types.ts`, the view that renders it, and the markdown generator in `src/exportUtils.ts` together — these four are a contract.
+The grading rubric is a single `SHARED_RUBRIC` constant composed into all four `*SystemInstruction` exports, so a rubric change applies to every mode at once — **keep it that way; do not fork per-mode copies.** Each mode also has a `*_SCHEMA_TEMPLATE` (the exact JSON shape demanded of the model, with a `__…MODULE_FIELDS__` placeholder token). `buildPrompt(endpoint, modules)` is the **only** entry point `aiClient.ts` uses: it concatenates instruction + module asks + schema, substituting the placeholder with fragments for exactly the immersion modules the user enabled. If you change a schema template, update the matching TypeScript interface in `src/types.ts`, the view that renders it, and the markdown generator in `src/exportUtils.ts` together — these four are a contract.
+
+### Immersion modules (optional, toggleable report sections)
+
+Six extra creative sections (dating profile, against-type shopping list, top songs, demise/obituary, psychoanalysis, emotional registers) are **user-toggleable per mode** and only requested from the model when checked — the schema is assembled per request, so unchecked modules cost zero output tokens. The moving parts:
+
+- `src/immersionModules.ts` — module ids, labels, per-mode defaults (audit defaults to dating+shopping on; comparison/group/multichar default all off because they multiply output per card/character).
+- `src/components/ImmersionModulesPanel.tsx` — the checkbox panel + `useImmersionModules(mode)` hook (persists to `localStorage` under `loresieve_immersion_modules_<mode>`), rendered by all three input components.
+- `MODULE_PROMPTS` in `src/systemInstructions.ts` — per-module ask text + schema fragments (rich shapes for audit/comparison, compact per-character strings for group/multichar).
+- `src/components/ImmersionSections.tsx` (solo results) and `src/components/CharacterModuleLines.tsx` (roster entries) — the renderers; every field is optional, render nothing when absent.
+
+Adding a module means touching: the id list, `MODULE_PROMPTS`, the optional fields in `types.ts`, guards in `normalizeAnalysis()` if the shape is non-string, the two renderers, and `exportUtils.ts`. The rubric already declares all modules **non-scoring** — keep new ones under that rule.
 
 ### Score scales (easy to get wrong)
 

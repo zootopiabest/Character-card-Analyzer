@@ -2,6 +2,8 @@ import React, { useState, useRef } from "react";
 import { Upload, CheckCircle2, RotateCcw, ArrowRightLeft } from "lucide-react";
 import { readCardFile } from "../utils";
 import ModelSettingsPanel, { useModelSettings } from "./ModelSettings";
+import ImmersionModulesPanel, { useImmersionModules } from "./ImmersionModulesPanel";
+import { ImmersionModuleId } from "../immersionModules";
 
 interface ComparisonInputProps {
   onCompare: (
@@ -16,7 +18,8 @@ interface ComparisonInputProps {
     provider: string,
     customBaseUrl: string | null,
     thinkingMode?: boolean,
-    reasoningEffort?: string
+    reasoningEffort?: string,
+    modules?: ImmersionModuleId[]
   ) => void;
   isLoading: boolean;
 }
@@ -44,6 +47,9 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
 
   // Shared provider/model/key/thinking settings (persisted as they change).
   const settings = useModelSettings();
+  // Optional immersion-module selection (all off by default in comparison
+  // mode, since every module is produced twice — once per card).
+  const immersion = useImmersionModules("comparison");
 
   const origInputRef = useRef<HTMLInputElement>(null);
   const remakeInputRef = useRef<HTMLInputElement>(null);
@@ -125,7 +131,8 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
       settings.provider,
       settings.baseUrl,
       settings.thinkingMode,
-      settings.reasoningEffort
+      settings.reasoningEffort,
+      immersion.enabled
     );
   };
 
@@ -362,6 +369,9 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
         </div>
 
       </div>
+
+      {/* Optional immersion modules (produced for both cards, so off by default) */}
+      <ImmersionModulesPanel m={immersion} />
 
       {/* Shared Model & API Key settings (provider, model, key, thinking mode) */}
       <ModelSettingsPanel s={settings} />

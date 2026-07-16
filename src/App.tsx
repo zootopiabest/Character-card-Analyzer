@@ -11,8 +11,10 @@ import ReviewStats from "./components/ReviewStats";
 import Observations from "./components/Observations";
 import VisualMatch from "./components/VisualMatch";
 import ExportButtons from "./components/ExportButtons";
+import ImmersionSections from "./components/ImmersionSections";
 import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "./types";
 import { runAnalyze, runCompare, runGroup, runMultichar } from "./aiClient";
+import { ImmersionModuleId } from "./immersionModules";
 import { getSlopScoreMeta } from "./scoreMeta";
 
 
@@ -69,7 +71,8 @@ export default function App() {
     customBaseUrl: string | null = null,
     analyzerNotes: string | null = null,
     thinkingMode: boolean = false,
-    reasoningEffort: string = "medium"
+    reasoningEffort: string = "medium",
+    modules: ImmersionModuleId[] = []
   ) => {
     setIsLoading(true);
     setError(null);
@@ -78,7 +81,7 @@ export default function App() {
     try {
       const result = await runAnalyze(
         { description, imageBase64, imageMimeType, analyzerNotes },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules }
       );
       setAnalysis(result);
     } catch (err: any) {
@@ -101,7 +104,8 @@ export default function App() {
     provider: string,
     customBaseUrl: string | null = null,
     thinkingMode: boolean = false,
-    reasoningEffort: string = "medium"
+    reasoningEffort: string = "medium",
+    modules: ImmersionModuleId[] = []
   ) => {
     setIsLoading(true);
     setError(null);
@@ -110,7 +114,7 @@ export default function App() {
     try {
       const result = await runCompare(
         { originalDescription, remakeDescription },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules }
       );
       setComparisonResult(result);
     } catch (err: any) {
@@ -128,7 +132,8 @@ export default function App() {
     provider: string,
     customBaseUrl: string | null = null,
     thinkingMode: boolean = false,
-    reasoningEffort: string = "medium"
+    reasoningEffort: string = "medium",
+    modules: ImmersionModuleId[] = []
   ) => {
     setIsLoading(true);
     setError(null);
@@ -137,7 +142,7 @@ export default function App() {
     try {
       const result = await runGroup(
         { characters },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules }
       );
       setGroupResult(result);
     } catch (err: any) {
@@ -158,7 +163,8 @@ export default function App() {
     customBaseUrl: string | null = null,
     analyzerNotes: string | null = null,
     thinkingMode: boolean = false,
-    reasoningEffort: string = "medium"
+    reasoningEffort: string = "medium",
+    modules: ImmersionModuleId[] = []
   ) => {
     setIsLoading(true);
     setError(null);
@@ -167,7 +173,7 @@ export default function App() {
     try {
       const result = await runMultichar(
         { description, analyzerNotes },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules }
       );
       setMultiCharResult(result);
     } catch (err: any) {
@@ -440,54 +446,27 @@ export default function App() {
                           </h3>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Capabilities Comparison */}
-                          <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-4">
-                            {/* Does Best */}
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-mono tracking-wider font-bold text-emerald-400 uppercase flex items-center gap-1.5">
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#10B981]" />
-                                PROMPT_STRENGTH // APEX_PERFORMANCE
-                              </span>
-                              <div className="text-[11px] leading-relaxed text-zinc-300 font-mono bg-[#050505] p-3 rounded border border-[#1A1A1A] italic">
-                                &ldquo;{analysis.doesBest}&rdquo;
-                              </div>
-                            </div>
-
-                            {/* Does Worst */}
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-mono tracking-wider font-bold text-rose-500 uppercase flex items-center gap-1.5">
-                                <span className="h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_6px_#EF4444]" />
-                                PROMPT_WEAKNESS // UNSTABLE_VULNERABILITIES
-                              </span>
-                              <div className="text-[11px] leading-relaxed text-zinc-300 font-mono bg-[#050505] p-3 rounded border border-[#1A1A1A] italic">
-                                &ldquo;{analysis.doesWorst}&rdquo;
-                              </div>
+                        {/* Capabilities Comparison */}
+                        <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-4">
+                          {/* Does Best */}
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-mono tracking-wider font-bold text-emerald-400 uppercase flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#10B981]" />
+                              PROMPT_STRENGTH // APEX_PERFORMANCE
+                            </span>
+                            <div className="text-[11px] leading-relaxed text-zinc-300 font-mono bg-[#050505] p-3 rounded border border-[#1A1A1A] italic">
+                              &ldquo;{analysis.doesBest}&rdquo;
                             </div>
                           </div>
 
-                          {/* Creative Scenarios */}
-                          <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-4">
-                            {/* Dating Profile */}
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-mono tracking-wider font-bold text-white uppercase flex items-center gap-1.5">
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#00F0FF] shadow-[0_0_6px_#00F0FF]" />
-                                Dating Profile Bio // Cyber-Anthology Tinder
-                              </span>
-                              <div className="text-xs text-zinc-200 font-sans leading-relaxed bg-[#050505] p-3 rounded border border-[#1A1A1A] italic">
-                                &ldquo;{analysis.datingProfile}&rdquo;
-                              </div>
-                            </div>
-
-                            {/* Store Run */}
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-mono tracking-wider font-bold text-[#FACC15] uppercase flex items-center gap-1.5">
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#FACC15] shadow-[0_0_6px_#FACC15]" />
-                                Store Trip // Incident Report
-                              </span>
-                              <div className="text-[11px] leading-relaxed text-zinc-300 font-sans bg-[#050505] p-3 rounded border border-[#1A1A1A] italic">
-                                &ldquo;{analysis.walmartRun}&rdquo;
-                              </div>
+                          {/* Does Worst */}
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-mono tracking-wider font-bold text-rose-500 uppercase flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_6px_#EF4444]" />
+                              PROMPT_WEAKNESS // UNSTABLE_VULNERABILITIES
+                            </span>
+                            <div className="text-[11px] leading-relaxed text-zinc-300 font-mono bg-[#050505] p-3 rounded border border-[#1A1A1A] italic">
+                              &ldquo;{analysis.doesWorst}&rdquo;
                             </div>
                           </div>
                         </div>
@@ -528,6 +507,9 @@ export default function App() {
                             </p>
                           </div>
                         )}
+
+                        {/* OPTIONAL IMMERSION MODULES (only the ones enabled for this run) */}
+                        <ImmersionSections data={analysis} />
                       </div>
 
                       {/* VISUAL ACCURACY (if loaded) */}
@@ -800,7 +782,7 @@ export default function App() {
           ) : appMode === "multichar" ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
               <div className="lg:col-span-4 space-y-4">
-                <CardInput onAnalyze={handleMultiCharAnalyze} isLoading={isLoading} onNameExtracted={setExtractedName} supportsVisualAudit={false} />
+                <CardInput onAnalyze={handleMultiCharAnalyze} isLoading={isLoading} onNameExtracted={setExtractedName} supportsVisualAudit={false} moduleMode="multichar" />
               </div>
 
               {/* REPORT DISPLAY AREA */}

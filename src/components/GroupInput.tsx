@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Upload, X, Plus } from "lucide-react";
 import { readCardFile } from "../utils";
 import ModelSettingsPanel, { useModelSettings } from "./ModelSettings";
+import ImmersionModulesPanel, { useImmersionModules } from "./ImmersionModulesPanel";
+import { ImmersionModuleId } from "../immersionModules";
 
 interface GroupInputProps {
   onAnalyze: (
@@ -11,7 +13,8 @@ interface GroupInputProps {
     provider: string,
     customBaseUrl: string | null,
     thinkingMode?: boolean,
-    reasoningEffort?: string
+    reasoningEffort?: string,
+    modules?: ImmersionModuleId[]
   ) => void;
   isLoading: boolean;
 }
@@ -31,6 +34,9 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
 
   // Shared provider/model/key/thinking settings (persisted as they change).
   const settings = useModelSettings();
+  // Optional immersion-module selection (all off by default in group mode,
+  // since every module is produced once per roster member).
+  const immersion = useImmersionModules("group");
 
   const addMember = () => {
     setMembers([
@@ -97,7 +103,8 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
       settings.provider,
       settings.baseUrl.trim() || null,
       settings.thinkingMode,
-      settings.reasoningEffort
+      settings.reasoningEffort,
+      immersion.enabled
     );
   };
 
@@ -189,6 +196,9 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
           </div>
         )}
       </div>
+
+      {/* Optional immersion modules (produced per roster member, so off by default) */}
+      <ImmersionModulesPanel m={immersion} />
 
       {/* Shared Model & API Key settings (provider, model, key, thinking mode) */}
       <ModelSettingsPanel s={settings} />

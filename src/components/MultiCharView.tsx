@@ -1,6 +1,7 @@
 import { MultiCharResult } from "../types";
 import { Users, Terminal, Globe, BookOpen, Scroll } from "lucide-react";
 import { getSlopScoreMeta } from "../scoreMeta";
+import CharacterModuleLines from "./CharacterModuleLines";
 
 export default function MultiCharView({ data }: { data: MultiCharResult }) {
   const styleMeta = getSlopScoreMeta(data.overallSlopScore);
@@ -104,6 +105,9 @@ export default function MultiCharView({ data }: { data: MultiCharResult }) {
               <div className="mt-4 pt-3 border-t border-[#111]">
                 <span className="text-[9px] font-mono text-rose-400 uppercase font-bold block mb-1">Critical Notes</span>
                 <p className="text-[11px] text-rose-200/70 font-sans leading-snug">{char.criticalNotes}</p>
+
+                {/* Optional immersion modules (present only when enabled for the run) */}
+                <CharacterModuleLines char={char} />
               </div>
             </div>
           ))}

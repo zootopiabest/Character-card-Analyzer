@@ -4,16 +4,8 @@
 // the app to the chosen provider using the user's own API key (BYOK). The
 // prompt instructions are imported straight from systemInstructions.ts, so the
 // app needs no backend at all and can be packaged into a mobile app.
-import {
-  analyzeSystemInstruction,
-  compareSystemInstruction,
-  groupSystemInstruction,
-  multicharSystemInstruction,
-  analyzeSchemaPrompt,
-  compareSchemaPrompt,
-  groupSchemaPrompt,
-  multicharSchemaPrompt,
-} from "./systemInstructions";
+import { buildPrompt } from "./systemInstructions";
+import type { ImmersionModuleId } from "./immersionModules";
 import { safeParseJSON } from "./utils";
 
 export type EndpointType = "analyze" | "compare" | "group" | "multichar";
@@ -25,6 +17,10 @@ export interface RunnerConfig {
   customBaseUrl?: string | null;
   thinkingMode?: boolean;
   reasoningEffort?: string;
+  // User-selected optional immersion modules; only these are requested from
+  // the model (the schema is assembled per request), so unchecked modules
+  // cost zero output tokens.
+  modules?: ImmersionModuleId[];
 }
 
 interface ImagePart {
@@ -32,12 +28,11 @@ interface ImagePart {
   base64: string;
 }
 
-const SYSTEM_CONTENT: Record<EndpointType, string> = {
-  analyze: analyzeSystemInstruction + analyzeSchemaPrompt,
-  compare: compareSystemInstruction + compareSchemaPrompt,
-  group: groupSystemInstruction + groupSchemaPrompt,
-  multichar: multicharSystemInstruction + multicharSchemaPrompt,
-};
+// The system prompt is assembled per request so it only demands the immersion
+// modules the user actually enabled.
+function systemContent(endpoint: EndpointType, cfg: RunnerConfig): string {
+  return buildPrompt(endpoint, cfg.modules ?? []);
+}
 
 function providerLabel(provider: string): string {
   if (provider === "openai") return "OpenAI";
@@ -113,7 +108,7 @@ async function callOpenAICompatible(
     body: JSON.stringify({
       model: normalizeModel(cfg.model, cfg.provider),
       messages: [
-        { role: "system", content: SYSTEM_CONTENT[endpoint] },
+        { role: "system", content: systemContent(endpoint, cfg) },
         { role: "user", content: userContent },
       ],
       ...(cfg.provider === "openai" && { response_format: { type: "json_object" } }),
@@ -170,7 +165,7 @@ async function callGemini(
     // request logs or browser history.
     headers: { "Content-Type": "application/json", "x-goog-api-key": cfg.apiKey.trim() },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_CONTENT[endpoint] }] },
+      systemInstruction: { parts: [{ text: systemContent(endpoint, cfg) }] },
       contents: [{ role: "user", parts }],
       generationConfig: {
         maxOutputTokens: 8192,
@@ -213,6 +208,21 @@ function normalizeAnalysis(d: any): any {
   if (data.visualComparison) {
     data.visualComparison.matches = asArray(data.visualComparison.matches);
     data.visualComparison.mismatches = asArray(data.visualComparison.mismatches);
+  }
+  // Optional immersion modules: coerce present-but-malformed shapes so the
+  // views can trust `items`/`songs` arrays and object sub-fields.
+  if (data.shoppingList) {
+    data.shoppingList = asObject(data.shoppingList);
+    data.shoppingList.items = asArray(data.shoppingList.items);
+  }
+  if (data.topSongs) {
+    data.topSongs = asArray(data.topSongs);
+  }
+  if (data.demise) {
+    data.demise = asObject(data.demise);
+  }
+  if (data.emotionalRegisters) {
+    data.emotionalRegisters = asObject(data.emotionalRegisters);
   }
   return data;
 }

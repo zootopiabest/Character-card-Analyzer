@@ -3,6 +3,8 @@ import { Upload, Sparkles, CheckCircle2, RotateCcw } from "lucide-react";
 import { readCardFile } from "../utils";
 import { PRESET_CHARACTERS } from "../data/examples";
 import ModelSettingsPanel, { useModelSettings } from "./ModelSettings";
+import ImmersionModulesPanel, { useImmersionModules } from "./ImmersionModulesPanel";
+import { ImmersionModuleId } from "../immersionModules";
 
 interface CardInputProps {
   onAnalyze: (
@@ -15,16 +17,20 @@ interface CardInputProps {
     customBaseUrl: string | null,
     analyzerNotes?: string | null,
     thinkingMode?: boolean,
-    reasoningEffort?: string
+    reasoningEffort?: string,
+    modules?: ImmersionModuleId[]
   ) => void;
   isLoading: boolean;
   onNameExtracted?: (name: string | null) => void;
   // Multi-char mode reuses this panel but doesn't send the image to the AI,
   // so it passes false to keep the upload copy honest.
   supportsVisualAudit?: boolean;
+  // Which mode's immersion-module selection to load/persist ("audit" default;
+  // multi-char passes "multichar" so its choices are remembered separately).
+  moduleMode?: "audit" | "multichar";
 }
 
-export default function CardInput({ onAnalyze, isLoading, onNameExtracted, supportsVisualAudit = true }: CardInputProps) {
+export default function CardInput({ onAnalyze, isLoading, onNameExtracted, supportsVisualAudit = true, moduleMode = "audit" }: CardInputProps) {
   const [description, setDescription] = useState("");
   const [analyzerNotes, setAnalyzerNotes] = useState("");
 
@@ -44,6 +50,8 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
 
   // Shared provider/model/key/thinking settings (persisted as they change).
   const settings = useModelSettings();
+  // Optional immersion-module selection (persisted per mode as it changes).
+  const immersion = useImmersionModules(moduleMode);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -129,7 +137,8 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
       settings.baseUrl,
       analyzerNotes.trim() ? analyzerNotes : null,
       settings.thinkingMode,
-      settings.reasoningEffort
+      settings.reasoningEffort,
+      immersion.enabled
     );
   };
 
@@ -314,6 +323,9 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
             ))}
           </div>
         </div>
+
+        {/* Optional immersion modules (extra fun sections, off = cheaper runs) */}
+        <ImmersionModulesPanel m={immersion} />
 
         {/* Shared Model & API Key settings (provider, model, key, thinking mode) */}
         <ModelSettingsPanel s={settings} />

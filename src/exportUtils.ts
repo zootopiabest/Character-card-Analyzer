@@ -6,6 +6,25 @@ function statLine(label: string, s?: { score?: number; level?: string; notes?: s
   return `- **${label}**: ${s?.score ?? "?"}/10 (${s?.level ?? "N/A"}) - ${s?.notes ?? ""}\n`;
 }
 
+// Compact per-character immersion-module lines (group + multichar rosters).
+function characterModuleLines(c: {
+  datingProfile?: string | null;
+  shoppingList?: string | null;
+  topSongs?: string | null;
+  demise?: string | null;
+  psychoanalysis?: string | null;
+  emotionalRegisters?: string | null;
+}): string {
+  let md = "";
+  if (c.datingProfile) md += `- **Dating Profile**: ${c.datingProfile}\n`;
+  if (c.shoppingList) md += `- **Against-Type Shopping**: ${c.shoppingList}\n`;
+  if (c.topSongs) md += `- **On Repeat**: ${c.topSongs}\n`;
+  if (c.demise) md += `- **Demise & Obituary**: ${c.demise}\n`;
+  if (c.psychoanalysis) md += `- **Psychoanalysis**: ${c.psychoanalysis}\n`;
+  if (c.emotionalRegisters) md += `- **Emotional Registers**: ${c.emotionalRegisters}\n`;
+  return md;
+}
+
 export function generateAuditMarkdown(data: AnalysisResult, characterName: string = "Character"): string {
   let md = `# Audit Report: ${characterName}\n\n`;
 
@@ -42,9 +61,43 @@ export function generateAuditMarkdown(data: AnalysisResult, characterName: strin
   md += `- **First Message Synergy**: ${data.firstMessageSynergy}\n`;
   md += `- **Hidden Dynamic**: ${data.hiddenDynamic}\n\n`;
 
-  md += `## Roleplay Scenarios\n`;
-  md += `- **Dating Profile**: ${data.datingProfile}\n`;
-  md += `- **Walmart Run**: ${data.walmartRun}\n\n`;
+  // Optional immersion modules — only whatever the user enabled for this run.
+  let modulesMd = "";
+  if (data.datingProfile) {
+    modulesMd += `- **Dating Profile**: ${data.datingProfile}\n`;
+  }
+  if (data.shoppingList && data.shoppingList.items?.length) {
+    modulesMd += `- **Against-Type Shopping List**:\n`;
+    data.shoppingList.items.forEach(item => {
+      modulesMd += `  - ${item}\n`;
+    });
+    if (data.shoppingList.notes) modulesMd += `  - *${data.shoppingList.notes}*\n`;
+  }
+  if (data.topSongs && data.topSongs.length) {
+    modulesMd += `- **Top Songs**:\n`;
+    data.topSongs.forEach((song, i) => {
+      modulesMd += `  ${i + 1}. *${song.title}* — ${song.artist}${song.vibe ? ` (${song.vibe})` : ""}\n`;
+    });
+  }
+  if (data.demise) {
+    if (data.demise.howTheyDie) modulesMd += `- **How They Die**: ${data.demise.howTheyDie}\n`;
+    if (data.demise.obituary) modulesMd += `- **Obituary**: ${data.demise.obituary}\n`;
+  }
+  if (data.psychoanalysis) {
+    modulesMd += `- **Psychoanalysis**: ${data.psychoanalysis}\n`;
+  }
+  if (data.emotionalRegisters) {
+    const er = data.emotionalRegisters;
+    modulesMd += `- **Emotional Registers**:\n`;
+    if (er.sad) modulesMd += `  - Sad: ${er.sad}\n`;
+    if (er.angry) modulesMd += `  - Angry: ${er.angry}\n`;
+    if (er.happy) modulesMd += `  - Happy: ${er.happy}\n`;
+    if (er.grief) modulesMd += `  - Grief: ${er.grief}\n`;
+    if (er.comedy) modulesMd += `  - Comedy: ${er.comedy}\n`;
+  }
+  if (modulesMd) {
+    md += `## Immersion Modules\n${modulesMd}\n`;
+  }
 
   if (data.observations && data.observations.length > 0) {
     md += `## Quirky Observations\n`;
@@ -115,7 +168,9 @@ export function generateGroupMarkdown(data: GroupResult): string {
   data.characterBreakdowns.forEach(c => {
     md += `### ${c.name} (${c.archetype})\n`;
     md += `- **Group Role**: ${c.groupRole}\n`;
-    md += `- **Friction Points**: ${c.potentialConflicts}\n\n`;
+    md += `- **Friction Points**: ${c.potentialConflicts}\n`;
+    md += characterModuleLines(c);
+    md += `\n`;
   });
 
   md += `## Dynamic Scenarios\n`;
@@ -146,7 +201,9 @@ export function generateMultiCharMarkdown(data: MultiCharResult, characterName: 
     md += `### ${c.name} (${c.archetype})\n`;
     md += `- **Depth Score**: ${c.depthScore}/10\n`;
     md += `- **Synergy With World**: ${c.synergyWithWorld}\n`;
-    md += `- **Critical Notes**: ${c.criticalNotes}\n\n`;
+    md += `- **Critical Notes**: ${c.criticalNotes}\n`;
+    md += characterModuleLines(c);
+    md += `\n`;
   });
 
   md += `## Group Cohesion\n${data.groupCohesion}\n\n`;

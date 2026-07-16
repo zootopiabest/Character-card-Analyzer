@@ -1,3 +1,5 @@
+import type { ImmersionModuleId } from "./immersionModules";
+
 // Shared evaluation rubric used verbatim by all four analyzer prompts.
 // Kept in one place so a rule change applies to every mode at once.
 const SHARED_RUBRIC = `CALIBRATION BASELINE:
@@ -330,7 +332,7 @@ Required output fields do not require negative findings.
 - doesWorst may identify an intentional limitation or scope boundary. If no major failure is supported, say so plainly.
 - hiddenDynamic must be grounded in multiple concrete details. It may be benign. If no strong unintended dynamic is supported, say that instead of inventing pathology.
 - observations are not a quota for complaints.
-- datingProfile and walmartRun are non-scoring voice stress tests. Never use them as evidence for a deduction.
+- Any optional immersion modules requested (dating profile, shopping list, top songs, demise/obituary, psychoanalysis, emotional registers) are non-scoring voice stress tests. Never use their content as evidence for a deduction. Adapt modern concepts into the card's own universe when the setting demands it, while preserving the character.
 
 FINAL CHECK BEFORE SCORING:
 Delete any criticism that is based only on:
@@ -407,8 +409,6 @@ Also include:
 - doesWorst: 1-2 things the setup is likely to fail at during roleplay; may instead name an intentional scope boundary if no major failure is supported
 - firstMessageSynergy: how well the active greeting synthesizes the profile and launches the RP
 - hiddenDynamic: unintended deeper psychological or structural dynamic the LLM may infer; state plainly if no strong unintended dynamic is supported
-- datingProfile: 1-2 sentence dating app bio in the character's own voice
-- walmartRun: a specific narrative paragraph showing the character in a grocery/retail trip using only traits supported by the card
 
 IF AN IMAGE IS PROVIDED:
 Compare the image to the text description. Judge hairstyle, colors, body type, clothing, accessories, expression, species traits, and overall vibe. Static anatomy is still protected by the anatomy override above. Score visual accuracy 0-100. If no image is provided, leave visualComparison null.
@@ -444,7 +444,7 @@ Each card's overallSlopScore and coreAnalysis sub-scores must reflect that card 
 
 ` + SHARED_RUBRIC + `
 
-BEHAVIOR & IMMERSION DETAILS: Provide doesBest, doesWorst, datingProfile, and walmartRun (retail store trip) for both versions, showing any shift in capabilities or personality quirks caused by the rewrite. These are diagnostics, not automatic scoring evidence — do not invent regressions or improvements merely because the schema asks for them.
+BEHAVIOR & IMMERSION DETAILS: Provide doesBest and doesWorst for both versions, showing any shift in capabilities or personality quirks caused by the rewrite. These are diagnostics, not automatic scoring evidence — do not invent regressions or improvements merely because the schema asks for them.
 
 Tone: Be highly cynical, witty, sardonic, extremely direct, and brutally honest but deeply insightful about how the rewrite impacts production. Keep each text field concise — aim for 2-4 sharp sentences — so the full JSON fits comfortably in the response. Favor specific, cutting insight over length.
 
@@ -496,7 +496,7 @@ Above all else, DO NOT BE A SYCOPHANT. If an idea is bad or poorly executed, say
 
 Return your evaluation as a strict JSON matching the schema.`;
 
-export const analyzeSchemaPrompt = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{
+const ANALYZE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{
   "overallSlopScore": number (0 to 100),
   "slopLabel": "string",
   "slopSummary": "string",
@@ -519,10 +519,8 @@ export const analyzeSchemaPrompt = `\n\nYour entire output must be a single vali
   },
   "doesBest": "string",
   "doesWorst": "string; may state no major structural failure and name an intentional scope boundary instead",
-  "datingProfile": "string",
-  "walmartRun": "string",
   "firstMessageSynergy": "string",
-  "hiddenDynamic": "string; grounded inference only, or state that no strong unintended dynamic is supported",
+  "hiddenDynamic": "string; grounded inference only, or state that no strong unintended dynamic is supported",__MODULE_FIELDS__
   "creatorNotesBlurb": "string (If NO creator notes are provided, output 'None provided.')",
   "observations": [
     { "emoji": "string", "text": "string" }
@@ -535,7 +533,7 @@ export const analyzeSchemaPrompt = `\n\nYour entire output must be a single vali
   }
 }`;
 
-export const compareSchemaPrompt = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{
+const COMPARE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{
   "original": {
     "overallSlopScore": 50,
     "slopLabel": "Certified Human",
@@ -559,10 +557,8 @@ export const compareSchemaPrompt = `\n\nYour entire output must be a single vali
     },
     "doesBest": "Where it excels in runtime play...",
     "doesWorst": "Where it fails or drops context...",
-    "datingProfile": "1-2 sentence perspective profile bio, accurate to character...",
-    "walmartRun": "Narrative paragraph describing a trip to a retail store based on quirks...",
     "firstMessageSynergy": "How well the greeting sets up the roleplay...",
-    "hiddenDynamic": "Secret or implicit dynamic the bot might fall into...",
+    "hiddenDynamic": "Secret or implicit dynamic the bot might fall into...",__CARD_MODULE_FIELDS__
     "creatorNotesBlurb": "Provide a short blurb about the creator notes or author commentary. If NONE are present, output 'None provided.' explicitly. DO NOT output null.",
     "observations": [
       { "emoji": "📌", "text": "Bullet point observation detail" }
@@ -591,10 +587,8 @@ export const compareSchemaPrompt = `\n\nYour entire output must be a single vali
     },
     "doesBest": "Where it excels in runtime play...",
     "doesWorst": "Where it fails or drops context...",
-    "datingProfile": "1-2 sentence perspective profile bio, accurate to character...",
-    "walmartRun": "Narrative paragraph describing a trip to a retail store based on quirks...",
     "firstMessageSynergy": "How well the greeting sets up the roleplay...",
-    "hiddenDynamic": "Secret or implicit dynamic the bot might fall into...",
+    "hiddenDynamic": "Secret or implicit dynamic the bot might fall into...",__CARD_MODULE_FIELDS__
     "creatorNotesBlurb": "Provide a short blurb about the creator notes or author commentary. If NONE are present, output 'None provided.' explicitly. DO NOT output null.",
     "observations": [
       { "emoji": "📌", "text": "Bullet point observation detail" }
@@ -612,6 +606,112 @@ export const compareSchemaPrompt = `\n\nYour entire output must be a single vali
   }
 }`;
 
-export const groupSchemaPrompt = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{\n  "groupSlopScore": number,\n  "slopLabel": "string",\n  "slopSummary": "string",\n  "synergyAnalysis": {\n    "overallCompatibility": "string",\n    "redundancyWarnings": ["string"],\n    "roleplayPotential": "string",\n    "tokenBloatWarning": "string"\n  },\n  "characterBreakdowns": [\n    {\n      "name": "string",\n      "archetype": "string",\n      "groupRole": "string",\n      "potentialConflicts": "string; may honestly state no major conflict is supported"\n    }\n  ],\n  "groupScenarios": {\n    "roadTrip": "string",\n    "bankHeist": "string"\n  },\n  "criticalAssessment": "string"\n}`;
+const GROUP_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{\n  "groupSlopScore": number,\n  "slopLabel": "string",\n  "slopSummary": "string",\n  "synergyAnalysis": {\n    "overallCompatibility": "string",\n    "redundancyWarnings": ["string"],\n    "roleplayPotential": "string",\n    "tokenBloatWarning": "string"\n  },\n  "characterBreakdowns": [\n    {\n      "name": "string",\n      "archetype": "string",\n      "groupRole": "string",\n      "potentialConflicts": "string; may honestly state no major conflict is supported"__PER_CHAR_MODULE_FIELDS__\n    }\n  ],\n  "groupScenarios": {\n    "roadTrip": "string",\n    "bankHeist": "string"\n  },\n  "criticalAssessment": "string"\n}`;
 
-export const multicharSchemaPrompt = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{\n  "overallSlopScore": number,\n  "slopLabel": "string",\n  "slopSummary": "string",\n  "worldAndSystemAnalysis": {\n    "worldBuilding": { "score": number, "notes": "string; judge sufficiency for intended scope, do not force N/A" },\n    "systemRulesAdherence": { "score": number, "notes": "string; absence of unnecessary rules is not a flaw" },\n    "lorebookIntegration": "string"\n  },\n  "characterAssessments": [\n    {\n      "name": "string",\n      "archetype": "string",\n      "depthScore": number,\n      "synergyWithWorld": "string",\n      "criticalNotes": "string"\n    }\n  ],\n  "groupCohesion": "string",\n  "criticalAssessment": "string",\n  "playScenarios": {\n    "rpgEncounter": "string",\n    "campFireChat": "string"\n  }\n}`;
+const MULTICHAR_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{\n  "overallSlopScore": number,\n  "slopLabel": "string",\n  "slopSummary": "string",\n  "worldAndSystemAnalysis": {\n    "worldBuilding": { "score": number, "notes": "string; judge sufficiency for intended scope, do not force N/A" },\n    "systemRulesAdherence": { "score": number, "notes": "string; absence of unnecessary rules is not a flaw" },\n    "lorebookIntegration": "string"\n  },\n  "characterAssessments": [\n    {\n      "name": "string",\n      "archetype": "string",\n      "depthScore": number,\n      "synergyWithWorld": "string",\n      "criticalNotes": "string"__PER_CHAR_MODULE_FIELDS__\n    }\n  ],\n  "groupCohesion": "string",\n  "criticalAssessment": "string",\n  "playScenarios": {\n    "rpgEncounter": "string",\n    "campFireChat": "string"\n  }\n}`;
+
+// ---------------------------------------------------------------------------
+// Optional immersion modules: per-module prompt fragments, assembled into the
+// system prompt at request time so unchecked modules cost zero output tokens.
+// The module ids and picker UI live in immersionModules.ts /
+// components/ImmersionModulesPanel.tsx; keep the ids in sync.
+// ---------------------------------------------------------------------------
+
+interface ModulePromptDef {
+  // What to produce, phrased for the "OPTIONAL IMMERSION MODULES" instruction block.
+  ask: string;
+  // Schema fragment for solo-card shapes (single audit + each comparison card).
+  soloSchema: string;
+  // Schema fragment for per-character entries (group + multichar rosters).
+  perCharSchema: string;
+}
+
+const MODULE_PROMPTS: Record<ImmersionModuleId, ModulePromptDef> = {
+  datingProfile: {
+    ask: "datingProfile: a short dating-app profile written in the character's own voice, adapted to whatever a dating app would plausibly look like in their universe (matchmaking scrolls, guild notice boards, ship-net personals, etc. when the setting demands it).",
+    soloSchema: `"datingProfile": "string; 2-4 sentence in-universe dating-app bio in the character's own voice"`,
+    perCharSchema: `"datingProfile": "string; 1-2 sentence in-universe dating-app bio in this character's voice"`,
+  },
+  shoppingList: {
+    ask: "shoppingList: an in-universe shopping list of things the character might plausibly grab OUTSIDE their typical likes and stated routine — be creative and against-type, but every item must still be defensible from the card's traits.",
+    soloSchema: `"shoppingList": { "items": ["string; 5-8 concrete in-universe items, each with a short parenthetical why"], "notes": "string; one line on what this against-type trip reveals about them" }`,
+    perCharSchema: `"shoppingList": "string; 3-5 against-type in-universe items with a brief why"`,
+  },
+  topSongs: {
+    ask: "topSongs: the character's top 5 most-listened songs, in-universe adjusted; invent plausible in-world artists and titles when the setting has no real-world music.",
+    soloSchema: `"topSongs": [ { "title": "string", "artist": "string", "vibe": "string; why it is on their rotation" } ]`,
+    perCharSchema: `"topSongs": "string; the 3 in-universe tracks they would have on repeat"`,
+  },
+  demise: {
+    ask: "demise: howTheyDie is the most narratively fitting death for this character given their traits and world; obituary is a short obituary for that death, written the way their world would memorialize them.",
+    soloSchema: `"demise": { "howTheyDie": "string; the most narratively fitting death, grounded in the card", "obituary": "string; a short in-universe obituary for that death" }`,
+    perCharSchema: `"demise": "string; how they die plus a one-line in-universe obituary"`,
+  },
+  psychoanalysis: {
+    ask: "psychoanalysis: a grounded psychological reading of the character based only on textual patterns in the card; describe behavior, do not diagnose the creator, and do not invent pathology the text does not support.",
+    soloSchema: `"psychoanalysis": "string; grounded psychological reading based only on textual patterns"`,
+    perCharSchema: `"psychoanalysis": "string; 1-2 sentence grounded psychological read"`,
+  },
+  emotionalRegisters: {
+    ask: "emotionalRegisters: how the character concretely reacts when a scene hits each register — sad, angry, happy, grief, and comedy — using only behavior the card supports.",
+    soloSchema: `"emotionalRegisters": { "sad": "string", "angry": "string", "happy": "string", "grief": "string", "comedy": "string" }`,
+    perCharSchema: `"emotionalRegisters": "string; one compact line covering their sad / angry / happy / grief / comedy reactions"`,
+  },
+};
+
+type ModuleContext = "solo" | "both" | "perCharacter";
+
+function moduleInstructionBlock(modules: ImmersionModuleId[], context: ModuleContext): string {
+  if (!modules.length) return "";
+  const contextNote =
+    context === "both"
+      ? "\nProduce every enabled module for BOTH versions, and keep each one terse (2 sentences max) so the full JSON stays compact."
+      : context === "perCharacter"
+      ? "\nProduce every enabled module for EVERY character, inside that character's entry, and keep each to 1-2 sentences."
+      : "";
+  const lines = modules.map((id) => `- ${MODULE_PROMPTS[id].ask}`).join("\n");
+  return `\n\nOPTIONAL IMMERSION MODULES (USER-SELECTED):\nThe user enabled the extra creative sections below. Rules for all of them: they are non-scoring voice stress tests — never use their content as evidence for any score deduction; stay strictly in-character, grounded only in traits the card supports; adapt modern concepts (dating apps, stores, music) into the card's own universe when the setting demands it.${contextNote}\n${lines}`;
+}
+
+function soloModuleFields(modules: ImmersionModuleId[], indent: string): string {
+  return modules.map((id) => `\n${indent}${MODULE_PROMPTS[id].soloSchema},`).join("");
+}
+
+function perCharModuleFields(modules: ImmersionModuleId[], indent: string): string {
+  return modules.map((id) => `,\n${indent}${MODULE_PROMPTS[id].perCharSchema}`).join("");
+}
+
+// Assemble the full system prompt (persona + rubric + module asks + schema)
+// for one endpoint and the user's selected modules. This is the only entry
+// point aiClient.ts uses.
+export function buildPrompt(
+  endpoint: "analyze" | "compare" | "group" | "multichar",
+  modules: ImmersionModuleId[]
+): string {
+  if (endpoint === "analyze") {
+    return (
+      analyzeSystemInstruction +
+      moduleInstructionBlock(modules, "solo") +
+      ANALYZE_SCHEMA_TEMPLATE.replace("__MODULE_FIELDS__", soloModuleFields(modules, "  "))
+    );
+  }
+  if (endpoint === "compare") {
+    return (
+      compareSystemInstruction +
+      moduleInstructionBlock(modules, "both") +
+      COMPARE_SCHEMA_TEMPLATE.split("__CARD_MODULE_FIELDS__").join(soloModuleFields(modules, "    "))
+    );
+  }
+  if (endpoint === "group") {
+    return (
+      groupSystemInstruction +
+      moduleInstructionBlock(modules, "perCharacter") +
+      GROUP_SCHEMA_TEMPLATE.replace("__PER_CHAR_MODULE_FIELDS__", perCharModuleFields(modules, "      "))
+    );
+  }
+  return (
+    multicharSystemInstruction +
+    moduleInstructionBlock(modules, "perCharacter") +
+    MULTICHAR_SCHEMA_TEMPLATE.replace("__PER_CHAR_MODULE_FIELDS__", perCharModuleFields(modules, "      "))
+  );
+}

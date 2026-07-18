@@ -1,6 +1,7 @@
 import { GroupResult } from "../types";
 import { Users, AlertTriangle, Terminal } from "lucide-react";
 import { getSlopScoreMeta } from "../scoreMeta";
+import CharacterModuleLines from "./CharacterModuleLines";
 
 export default function GroupView({ data }: { data: GroupResult }) {
   const styleMeta = getSlopScoreMeta(data.groupSlopScore);
@@ -112,6 +113,9 @@ export default function GroupView({ data }: { data: GroupResult }) {
                   <p className="text-[11px] text-zinc-400 font-sans leading-snug mt-0.5">{char.potentialConflicts}</p>
                 </div>
               </div>
+
+              {/* Optional immersion modules (present only when enabled for the run) */}
+              <CharacterModuleLines char={char} />
             </div>
           ))}
         </div>

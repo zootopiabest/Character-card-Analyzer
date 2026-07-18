@@ -47,8 +47,31 @@ export interface AnalysisResult {
   // Immersion & behavior fun dimensions
   doesBest: string;
   doesWorst: string;
-  datingProfile: string;
-  walmartRun: string;
+
+  // Optional immersion modules — present only when the user enabled the
+  // matching toggle for the run (see src/immersionModules.ts).
+  datingProfile?: string | null;
+  shoppingList?: {
+    items: string[];
+    notes: string;
+  } | null;
+  topSongs?: Array<{
+    title: string;
+    artist: string;
+    vibe: string;
+  }> | null;
+  demise?: {
+    howTheyDie: string;
+    obituary: string;
+  } | null;
+  psychoanalysis?: string | null;
+  emotionalRegisters?: {
+    sad: string;
+    angry: string;
+    happy: string;
+    grief: string;
+    comedy: string;
+  } | null;
 
   // New features
   firstMessageSynergy: string;
@@ -85,6 +108,14 @@ export interface GroupResult {
     archetype: string;
     groupRole: string; // The role they naturally fall into within this specific group
     potentialConflicts: string;
+    // Optional immersion modules — compact per-character strings, present
+    // only when the matching toggle was enabled for the run.
+    datingProfile?: string | null;
+    shoppingList?: string | null;
+    topSongs?: string | null;
+    demise?: string | null;
+    psychoanalysis?: string | null;
+    emotionalRegisters?: string | null;
   }>;
   
   groupScenarios: {
@@ -126,6 +157,14 @@ export interface MultiCharResult {
     depthScore: number;
     synergyWithWorld: string;
     criticalNotes: string;
+    // Optional immersion modules — compact per-character strings, present
+    // only when the matching toggle was enabled for the run.
+    datingProfile?: string | null;
+    shoppingList?: string | null;
+    topSongs?: string | null;
+    demise?: string | null;
+    psychoanalysis?: string | null;
+    emotionalRegisters?: string | null;
   }>;
 
   groupCohesion: string;

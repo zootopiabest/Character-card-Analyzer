@@ -3,6 +3,7 @@ import { Check, Award, AlertTriangle } from "lucide-react";
 import { ComparisonResult, AnalysisResult } from "../types";
 import ReviewStats from "./ReviewStats";
 import Observations from "./Observations";
+import ImmersionSections from "./ImmersionSections";
 
 interface ComparisonViewProps {
   comparisonData: ComparisonResult;
@@ -287,58 +288,6 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
             </div>
           )}
 
-          {/* SILLY COMPARISON SHOWDOWN (STORE & CYBER TINDER) */}
-          <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-4">
-            <span className="text-[10px] font-mono tracking-wider font-bold text-[#777] uppercase block">
-              CYBERNETIC BEHAVIOR TEST-BEDS
-            </span>
-            
-            <div className="space-y-4">
-              {/* STORE BATTLE */}
-              <div className="border border-dashed border-[#1E1E1E] p-4 rounded-xl space-y-3 bg-[#050505]">
-                <span className="text-[9px] font-mono font-bold text-[#FACC15] block uppercase tracking-widest text-center">
-                  STORE TRIP INCIDENT SHOWDOWN
-                </span>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1 text-zinc-400">
-                    <div className="text-[9px] font-mono font-black uppercase text-red-400">[ORIGINAL VERSION IN TARGET]</div>
-                    <p className="text-xs leading-relaxed italic bg-black/60 p-3 rounded border border-[#141414]">
-                      {original.walmartRun}
-                    </p>
-                  </div>
-                  <div className="space-y-1 text-zinc-300">
-                    <div className="text-[9px] font-mono font-black uppercase text-cyan-400">[REMAKE VERSION IN TARGET]</div>
-                    <p className="text-xs leading-relaxed italic bg-black/60 p-3 rounded border border-[#141414]">
-                      {remake.walmartRun}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* TINDER BATTLE */}
-              <div className="border border-dashed border-[#1E1E1E] p-4 rounded-xl space-y-3 bg-[#050505]">
-                <span className="text-[9px] font-mono font-black text-rose-500 block uppercase tracking-widest text-center">
-                  ONLINE DATING BIO CONTEST
-                </span>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1 text-zinc-400">
-                    <div className="text-[9px] font-mono font-bold uppercase text-red-400">ORIGINAL MATCHMAKER PROFILE</div>
-                    <p className="text-xs leading-relaxed italic bg-black/60 p-3 rounded border border-[#141414]">
-                      &ldquo;{original.datingProfile}&rdquo;
-                    </p>
-                  </div>
-                  <div className="space-y-1 text-zinc-300">
-                    <div className="text-[9px] font-mono font-bold uppercase text-cyan-400">REMAKE MATCHMAKER PROFILE</div>
-                    <p className="text-xs leading-relaxed italic bg-black/60 p-3 rounded border border-[#141414]">
-                      &ldquo;{remake.datingProfile}&rdquo;
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
         </div>
       )}
 
@@ -460,6 +409,9 @@ function IndividualAuditPanel({ analysis }: { analysis: AnalysisResult }) {
           </div>
         </div>
       )}
+
+      {/* OPTIONAL IMMERSION MODULES (only rendered when enabled for this run) */}
+      <ImmersionSections data={analysis} />
     </div>
   );
 }

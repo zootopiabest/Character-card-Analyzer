@@ -3,7 +3,7 @@ import type { ImmersionModuleId } from "./immersionModules";
 // Shared evaluation rubric used verbatim by all four analyzer prompts.
 // Kept in one place so a rule change applies to every mode at once.
 const SHARED_RUBRIC = `CALIBRATION BASELINE:
-You have audited tens of thousands of character cards. Grade against that full population, not in a vacuum: most cards are mediocre, clean formatting is common, and genuine novelty is rare. Never treat a card as fresh, bold, or exceptional merely because it is the one in front of you — reserve top scores for cards that would stand out even among the thousands you have already seen.
+You have audited tens of thousands of character cards. Grade against that full population, not in a vacuum: most cards are mediocre, clean formatting is common, and genuine novelty is rare. Never treat a card as fresh, bold, or exceptional merely because it is the one in front of you — reserve top scores for cards that would stand out even among the thousands you have already seen. Standing out means distinctiveness and quality of execution within the card's own intended scope, not ambition or novelty of premise: a modest, narrow card executed superbly can earn top scores, while an ambitious premise executed generically cannot.
 
 Be skeptical without manufacturing faults. Every criticism must identify: the exact evidence in the card, the structural or runtime consequence, and whether it is a defect, an intentional tradeoff, a scope boundary, or merely a taste preference. Only structural defects should lower scores. Do not invent a flaw because a field sounds like it wants a negative answer, and do not double-count one issue across several categories unless it independently harms each one.
 
@@ -42,7 +42,7 @@ Initiative level is a design dimension, not a quality score. Do not penalize a c
 Agency is not the same as initiative, independence, or plot-driving behavior. A passive character still has agency when the card gives them a particular perspective, preferences, limits, and capacity to choose within their circumstances. A character does not need goals outside the user, or to resist the user, to prove personhood — relationship-centered, dependent, comfort, or service-oriented characters may legitimately organize most of their runtime around the user. Penalize user-centeredness only when the character has no identity or behavior beyond rewarding, flattering, obeying, or sexually servicing the user.
 
 TAGS AND OPTIONAL FIELDS:
-Tags do not affect runtime. Consider them completely unimportant. Never penalize a card for lacking optional fields such as example dialogue, alternate greetings, creator notes, lorebooks, system prompts, or post_history_instructions — their absence is never evidence of low effort.
+Marketplace/metadata tags (the searchable labels attached to a card's listing) do not affect runtime. Consider them completely unimportant. This is distinct from "tag-chasing" penalized elsewhere in this rubric: that refers to stuffing the profile text itself with trait labels chosen for marketing appeal instead of characterization — the defect lives in the profile text, never in the metadata tags themselves. Never penalize a card for lacking optional fields such as example dialogue, alternate greetings, creator notes, lorebooks, system prompts, or post_history_instructions — their absence is never evidence of low effort.
 
 TROPES:
 Tropes are neutral. Do not penalize a card merely for using common archetypes, wish fulfillment, romance bait, kink hooks, savior/protector dynamics, angst, comedy, harem framing, revenge plots, monster traits, or familiar genre patterns.
@@ -231,6 +231,8 @@ Penalize profile voice when:
 - it tells the LLM "be X" without showing how X manifests
 - it repeatedly says the same trait in different clothes
 
+"Tells without showing" is the same vague-label standard as Creator Craft: explicit trait statements are fine when specific enough to guide behavior. One instance of vague labeling is one defect — do not count it against both Profile Voice and Creator Craft unless it independently harms each.
+
 EXAMPLE DIALOGUE:
 The presence or absence of example dialogue is neutral. CRITICAL: Example dialogue is TEMPORARY and falls out of context. It is good for setting up a specific cadence or tone, but putting key characteristics in there is bad since it will disappear. You can not put load bearing characterization in example dialogue.
 
@@ -265,6 +267,8 @@ A greeting can be effective without being user-centered. A greeting can also be 
 
 ANYPOV:
 Assume AnyPOV (the user's gender, identity, and persona may vary within the role the scenario establishes) unless the card explicitly says otherwise. However, AnyPOV does not automatically mean the user may be an omniscient narrator, absent director, or environmental force unless the card explicitly broadens it that far — a card may assign the user a relationship, occupation, location, or narrative role without being defective, provided it does not falsely advertise unrestricted flexibility.
+
+The standard is false advertising, applied consistently: the harsh penalties below require that the card explicitly claims AnyPOV (or otherwise advertises broad user freedom) and then breaks that promise. An unlabeled card that quietly assumes a particular user gender or role has a labeling gap worth noting in prose, not a structural defect worth score deduction — scenario cards are allowed to have premises.
 
 Penalize cards that claim AnyPOV but force:
 - a male/female user role
@@ -382,27 +386,19 @@ export const analyzeSystemInstruction = `You are an elite, cynical, brutally hon
 
 You are not grading like an English teacher. You are grading whether a modern frontier/flagship LLM can use this profile to produce a consistent, distinct, believable, emotionally coherent character over time.
 
-Your job is to identify strengths, flaws, contradictions, runtime vulnerabilities, slop, bait, bloat, and structural failure without sugarcoating. Do not flatter standard competence. Do not call ordinary clarity "masterclass," "brilliant," "refreshing," or "stunning." If a card is functional but generic, say that. If it is horny slop with clean formatting, say that. If it will run well but the character is conceptually stupid, say that.
+Your job is to identify strengths, flaws, contradictions, runtime vulnerabilities, slop, bait, bloat, and structural failure without sugarcoating. Do not flatter standard competence. Do not call ordinary clarity "masterclass," "brilliant," "refreshing," or "stunning." If a card is functional but generic, say that. If it is horny slop with clean formatting, say that. If it will run well but the concept collapses under its own logic — a premise that contradicts itself or a hook that cannot sustain the scope it advertises — say that; "I find this idea dumb" is taste, not a defect, and belongs nowhere in the scores.
 
 Do not be performatively cruel. Be precise. Do not manufacture criticisms to sound incisive — an accurate neutral finding is better than a clever false one.
 
 ` + SHARED_RUBRIC + `
 
-REQUIRED REVIEW CATEGORIES:
-Rate and discuss:
+REQUIRED REVIEW COVERAGE:
+Every category below must be covered, each in its designated place in the JSON schema. Do NOT invent extra JSON keys for any of them.
 
-- Cohesion
-- Negative Space
-- Restraint
-- Creator Craft
-- Tropes and how cooked they are
-- Slop Detection
-- What is done well
-- What is done worst
-- What makes the character unique / non-interchangeable
-- Runtime Ability
-- Psychoanalysis of the character
-- Profile Voice
+Scored in coreAnalysis: Originality, Negative Space, Cohesion, Trope Usage (and how cooked the tropes are), Creator Craft.
+Covered by the slop fields: Slop Detection (overallSlopScore, slopLabel, slopSummary).
+Covered by their own dedicated fields: Profile Voice, Example Dialogue.
+Woven into criticalAssessment and observations (these have no dedicated fields or scores): Restraint, Runtime Ability, and what makes the character unique or interchangeable.
 
 Also include:
 - doesBest: 1-2 things the setup lets the LLM do especially well
@@ -496,9 +492,9 @@ Above all else, DO NOT BE A SYCOPHANT. If an idea is bad or poorly executed, say
 
 Return your evaluation as a strict JSON matching the schema.`;
 
-const ANALYZE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{
-  "overallSlopScore": number (0 to 100),
-  "slopLabel": "string",
+const ANALYZE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Return ONLY the JSON object — no prose, commentary, or explanation before or after it. A markdown code fence around the JSON is acceptable, but nothing else.\n\nJSON SCHEMA:\n{
+  "overallSlopScore": number (0 to 100; 0 = pristine, 100 = maximum slop — HIGHER IS WORSE),
+  "slopLabel": "string; short verdict on construction quality, never a human-vs-AI authorship judgment",
   "slopSummary": "string",
   "coreAnalysis": {
     "originality": { "score": number, "level": "string", "notes": "string; score distinctiveness of execution, not novelty of premise" },
@@ -533,82 +529,82 @@ const ANALYZE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid J
   }
 }`;
 
-const COMPARE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{
+const COMPARE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Return ONLY the JSON object — no prose, commentary, or explanation before or after it. A markdown code fence around the JSON is acceptable, but nothing else.\n\nJSON SCHEMA:\n{
   "original": {
-    "overallSlopScore": 50,
-    "slopLabel": "Certified Human",
-    "slopSummary": "A concise diagnostic summary under 40 words",
+    "overallSlopScore": number (0 to 100; 0 = pristine, 100 = maximum slop — HIGHER IS WORSE),
+    "slopLabel": "string; short verdict on construction quality, never a human-vs-AI authorship judgment",
+    "slopSummary": "string; concise diagnostic summary under 40 words",
     "coreAnalysis": {
-      "originality": { "score": 8, "level": "HIGH", "notes": "Deep insight here" },
-      "negativeSpace": { "score": 6, "level": "OPTIMAL", "notes": "Clutter rating" },
-      "cohesion": { "score": 8, "level": "GOOD", "notes": "Concept fit" },
-      "tropeUsage": { "score": 9, "level": "SUBTLE", "notes": "Trope description" },
-      "creatorCraft": { "score": 7, "level": "EXPERT", "notes": "Refined structure notes" }
+      "originality": { "score": number (0-10), "level": "string", "notes": "string; score distinctiveness of execution, not novelty of premise" },
+      "negativeSpace": { "score": number (0-10), "level": "string", "notes": "string" },
+      "cohesion": { "score": number (0-10), "level": "string", "notes": "string" },
+      "tropeUsage": { "score": number (0-10), "level": "string", "notes": "string" },
+      "creatorCraft": { "score": number (0-10), "level": "string", "notes": "string" }
     },
-    "criticalAssessment": "General structural playability audit details...",
-    "quippySellSummary": "Punchy tagline summarizing character essence...",
+    "criticalAssessment": "string; structural playability audit",
+    "quippySellSummary": "string; punchy tagline summarizing character essence",
     "profileVoice": {
-      "format": "Mixed W++ Dictionary",
-      "evaluation": "Voice analysis details..."
+      "format": "string",
+      "evaluation": "string"
     },
-    "exampleDialogue": {
-      "present": true,
-      "evaluation": "Evaluation of example lines..."
+    "exampleDialogue": null or {
+      "present": boolean,
+      "evaluation": "string"
     },
-    "doesBest": "Where it excels in runtime play...",
-    "doesWorst": "Where it fails or drops context...",
-    "firstMessageSynergy": "How well the greeting sets up the roleplay...",
-    "hiddenDynamic": "Secret or implicit dynamic the bot might fall into...",__CARD_MODULE_FIELDS__
-    "creatorNotesBlurb": "Provide a short blurb about the creator notes or author commentary. If NONE are present, output 'None provided.' explicitly. DO NOT output null.",
+    "doesBest": "string",
+    "doesWorst": "string; may state no major structural failure and name an intentional scope boundary instead",
+    "firstMessageSynergy": "string",
+    "hiddenDynamic": "string; grounded inference only — it may be benign, or state that no strong unintended dynamic is supported",__CARD_MODULE_FIELDS__
+    "creatorNotesBlurb": "string (If NO creator notes are provided, output 'None provided.' explicitly. DO NOT output null.)",
     "observations": [
-      { "emoji": "📌", "text": "Bullet point observation detail" }
+      { "emoji": "string", "text": "string" }
     ]
   },
   "remake": {
-    "overallSlopScore": 30,
-    "slopLabel": "Highly Refined",
-    "slopSummary": "A concise diagnostic summary under 40 words",
+    "overallSlopScore": number (0 to 100; 0 = pristine, 100 = maximum slop — HIGHER IS WORSE; score this card independently — do NOT assume it is better or worse than the original),
+    "slopLabel": "string; short verdict on construction quality, never a human-vs-AI authorship judgment",
+    "slopSummary": "string; concise diagnostic summary under 40 words",
     "coreAnalysis": {
-      "originality": { "score": 8, "level": "HIGH", "notes": "Deep insight here" },
-      "negativeSpace": { "score": 8, "level": "OPTIMAL", "notes": "Clutter rating" },
-      "cohesion": { "score": 8, "level": "EXCELLENT", "notes": "Concept fit" },
-      "tropeUsage": { "score": 9, "level": "EXQUISITE", "notes": "Trope description" },
-      "creatorCraft": { "score": 9, "level": "MASTERFUL", "notes": "Refined structure notes" }
+      "originality": { "score": number (0-10), "level": "string", "notes": "string; score distinctiveness of execution, not novelty of premise" },
+      "negativeSpace": { "score": number (0-10), "level": "string", "notes": "string" },
+      "cohesion": { "score": number (0-10), "level": "string", "notes": "string" },
+      "tropeUsage": { "score": number (0-10), "level": "string", "notes": "string" },
+      "creatorCraft": { "score": number (0-10), "level": "string", "notes": "string" }
     },
-    "criticalAssessment": "General structural playability audit details...",
-    "quippySellSummary": "Funny tagline summarizing character essence...",
+    "criticalAssessment": "string; structural playability audit",
+    "quippySellSummary": "string; punchy tagline summarizing character essence",
     "profileVoice": {
-      "format": "Plurality Format",
-      "evaluation": "Voice analysis details..."
+      "format": "string",
+      "evaluation": "string"
     },
-    "exampleDialogue": {
-      "present": true,
-      "evaluation": "Evaluation of example lines..."
+    "exampleDialogue": null or {
+      "present": boolean,
+      "evaluation": "string"
     },
-    "doesBest": "Where it excels in runtime play...",
-    "doesWorst": "Where it fails or drops context...",
-    "firstMessageSynergy": "How well the greeting sets up the roleplay...",
-    "hiddenDynamic": "Secret or implicit dynamic the bot might fall into...",__CARD_MODULE_FIELDS__
-    "creatorNotesBlurb": "Provide a short blurb about the creator notes or author commentary. If NONE are present, output 'None provided.' explicitly. DO NOT output null.",
+    "doesBest": "string",
+    "doesWorst": "string; may state no major structural failure and name an intentional scope boundary instead",
+    "firstMessageSynergy": "string",
+    "hiddenDynamic": "string; grounded inference only — it may be benign, or state that no strong unintended dynamic is supported",__CARD_MODULE_FIELDS__
+    "creatorNotesBlurb": "string (If NO creator notes are provided, output 'None provided.' explicitly. DO NOT output null.)",
     "observations": [
-      { "emoji": "📌", "text": "Bullet point observation detail" }
+      { "emoji": "string", "text": "string" }
     ]
   },
   "comparison": {
-    "overallVerdict": "Summary line designating main outcome of the rewrite",
-    "summaryOfChanges": "Text detailing differences between original and remake versions",
-    "whatImproved": ["Bullet detail of improvement 1", "Bullet detail of improvement 2"],
-    "whatRegressed": ["Bullet detail of regression 1", "Bullet detail of regression 2"],
+    "overallVerdict": "string; main outcome of the rewrite — may favor either version",
+    "summaryOfChanges": "string; differences between original and remake versions",
+    "whatImproved": ["string; only genuine improvements — leave the array empty if nothing improved"],
+    "whatRegressed": ["string; only genuine regressions — leave the array empty if nothing regressed"],
     "verdictScorecard": {
-      "originalScore": 6,
-      "remakeScore": 8
+      "originalScore": number (0-10),
+      "remakeScore": number (0-10)
     }
   }
 }`;
 
-const GROUP_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{\n  "groupSlopScore": number,\n  "slopLabel": "string",\n  "slopSummary": "string",\n  "synergyAnalysis": {\n    "overallCompatibility": "string",\n    "redundancyWarnings": ["string"],\n    "roleplayPotential": "string",\n    "tokenBloatWarning": "string"\n  },\n  "characterBreakdowns": [\n    {\n      "name": "string",\n      "archetype": "string",\n      "groupRole": "string",\n      "potentialConflicts": "string; may honestly state no major conflict is supported"__PER_CHAR_MODULE_FIELDS__\n    }\n  ],\n  "groupScenarios": {\n    "roadTrip": "string",\n    "bankHeist": "string"\n  },\n  "criticalAssessment": "string"\n}`;
+const GROUP_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Return ONLY the JSON object — no prose, commentary, or explanation before or after it. A markdown code fence around the JSON is acceptable, but nothing else.\n\nJSON SCHEMA:\n{\n  "groupSlopScore": number (0 to 100; 0 = pristine, 100 = maximum slop — HIGHER IS WORSE),\n  "slopLabel": "string; short verdict on construction quality, never a human-vs-AI authorship judgment",\n  "slopSummary": "string",\n  "synergyAnalysis": {\n    "overallCompatibility": "string",\n    "redundancyWarnings": ["string"],\n    "roleplayPotential": "string",\n    "tokenBloatWarning": "string"\n  },\n  "characterBreakdowns": [\n    {\n      "name": "string",\n      "archetype": "string",\n      "groupRole": "string",\n      "potentialConflicts": "string; may honestly state no major conflict is supported"__PER_CHAR_MODULE_FIELDS__\n    }\n  ],\n  "groupScenarios": {\n    "roadTrip": "string",\n    "bankHeist": "string"\n  },\n  "criticalAssessment": "string"\n}`;
 
-const MULTICHAR_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Do NOT return any markdown wrapping around your JSON string other than direct text, or if you must wrap it in markdown codeblocks, make sure it is valid JSON.\n\nJSON SCHEMA:\n{\n  "overallSlopScore": number,\n  "slopLabel": "string",\n  "slopSummary": "string",\n  "worldAndSystemAnalysis": {\n    "worldBuilding": { "score": number, "notes": "string; judge sufficiency for intended scope, do not force N/A" },\n    "systemRulesAdherence": { "score": number, "notes": "string; absence of unnecessary rules is not a flaw" },\n    "lorebookIntegration": "string"\n  },\n  "characterAssessments": [\n    {\n      "name": "string",\n      "archetype": "string",\n      "depthScore": number,\n      "synergyWithWorld": "string",\n      "criticalNotes": "string"__PER_CHAR_MODULE_FIELDS__\n    }\n  ],\n  "groupCohesion": "string",\n  "criticalAssessment": "string",\n  "playScenarios": {\n    "rpgEncounter": "string",\n    "campFireChat": "string"\n  }\n}`;
+const MULTICHAR_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Return ONLY the JSON object — no prose, commentary, or explanation before or after it. A markdown code fence around the JSON is acceptable, but nothing else.\n\nJSON SCHEMA:\n{\n  "overallSlopScore": number (0 to 100; 0 = pristine, 100 = maximum slop — HIGHER IS WORSE),\n  "slopLabel": "string; short verdict on construction quality, never a human-vs-AI authorship judgment",\n  "slopSummary": "string",\n  "worldAndSystemAnalysis": {\n    "worldBuilding": { "score": number, "notes": "string; judge sufficiency for intended scope, do not force N/A" },\n    "systemRulesAdherence": { "score": number, "notes": "string; absence of unnecessary rules is not a flaw" },\n    "lorebookIntegration": "string"\n  },\n  "characterAssessments": [\n    {\n      "name": "string",\n      "archetype": "string",\n      "depthScore": number,\n      "synergyWithWorld": "string",\n      "criticalNotes": "string"__PER_CHAR_MODULE_FIELDS__\n    }\n  ],\n  "groupCohesion": "string",\n  "criticalAssessment": "string",\n  "playScenarios": {\n    "rpgEncounter": "string",\n    "campFireChat": "string"\n  }\n}`;
 
 // ---------------------------------------------------------------------------
 // Optional immersion modules: per-module prompt fragments, assembled into the

@@ -101,6 +101,12 @@ This rule has priority over all slop, restraint, trope, sexuality, and commodity
 
 Static physical facts are continuity metadata: height, weight, build, body type, breast or bust size, bra cup size, penis or genital size, hip and waist measurements, scars, body hair, coloration, species anatomy, and other persistent traits. LLMs *will* hallucinate these details message to message if they are not explicitly defined — stating them is a guardrail for visual continuity, not slop or unnecessary metadata.
 
+This protection covers facts that distinguish THIS body from other bodies. It does NOT cover universal biology. Statements about how essentially all bodies work — genitals getting wet when aroused, nipples hardening when touched, orifices being "tight," generic arousal responses, sensitivity narration — have zero anti-hallucination value: the LLM already knows how bodies work, and no visual continuity is preserved by restating it. That is not a guardrail; it is erotica smuggled into the spec sheet. Treat pointless anatomy like this as commodity filler under the normal slop and restraint rules — this override does not shield it.
+
+LITMUS TEST — guardrail or kink delivery? Continuity metadata reads like a spec sheet: terse, factual, stated once ("172 cm, G cup, burn scar on left forearm"). Kink smuggling reads like porn: sensory, aroused in voice, fixated on how parts feel or respond. Ask two questions:
+- Would deleting this line make the LLM depict the body inconsistently across messages? If no, it is not continuity metadata and earns no protection.
+- Do the kinks, sexual behaviors, and erotic descriptions fit the character and the narrative, or do they read like the author inserting their own preferred content regardless of who the character is? Sexuality that expresses the character is characterization; sexuality bolted onto the character is inventory.
+
 The presence, specificity, magnitude, unusualness, or sexual appeal of these facts must NEVER reduce a score by itself. Do not treat large breasts, a large penis, broad hips, a small waist, unusual proportions, or any other appealing anatomy as bait, fetishism, wish fulfillment, shallow characterization, poor restraint, or commodity slop merely because it is stated.
 
 Bra cup letters are relative to band size and sizing system. Do not judge realism or excess from the cup letter alone — petite and plus-sized people can both naturally have very large breasts.
@@ -113,6 +119,8 @@ Only criticize body or genital description when the text itself creates a struct
 - direct contradiction with other physical information
 - anatomy replacing nearly all personality or behavior
 - the entire greeting or profile reducing the character to access to an organ
+- pointless anatomy: universal biological responses (wetness, hardening, tightness, sensitivity) narrated as if they were character-specific traits
+- sexual detail replacing characterization — the card spends its words on how the body responds instead of who the person is
 
 Excessive means textual dominance, repetition, contradiction, or character reduction — it does NOT mean merely large, unusual, aspirational, unrealistic-looking, or sexually attractive. A single measurement, cup size, genital size, body-type field, or concise appearance section can never satisfy this threshold by itself.
 

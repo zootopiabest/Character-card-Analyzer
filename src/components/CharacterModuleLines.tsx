@@ -9,6 +9,8 @@ export interface CharacterModuleFields {
   demise?: string | null;
   psychoanalysis?: string | null;
   emotionalRegisters?: string | null;
+  boringTuesday?: string | null;
+  pissThemOff?: string | null;
 }
 
 const LINES: Array<{ key: keyof CharacterModuleFields; label: string; color: string }> = [
@@ -18,6 +20,8 @@ const LINES: Array<{ key: keyof CharacterModuleFields; label: string; color: str
   { key: "demise", label: "Demise & Obituary", color: "text-red-500" },
   { key: "psychoanalysis", label: "Psychoanalysis", color: "text-emerald-400" },
   { key: "emotionalRegisters", label: "Emotional Registers", color: "text-[#00F0FF]" },
+  { key: "boringTuesday", label: "Boring Tuesday Test", color: "text-amber-300" },
+  { key: "pissThemOff", label: "Three Ways to Piss Them Off", color: "text-orange-500" },
 ];
 
 export default function CharacterModuleLines({ char }: { char: CharacterModuleFields }) {

@@ -73,6 +73,15 @@ export interface AnalysisResult {
     grief: string;
     comedy: string;
   } | null;
+  boringTuesday?: {
+    inconvenience: string;
+    beat: string;
+  } | null;
+  pissThemOff?: {
+    trivial: string;
+    personal: string;
+    denied: string;
+  } | null;
 
   // New features
   firstMessageSynergy: string;
@@ -118,6 +127,8 @@ export interface GroupResult {
     demise?: string | null;
     psychoanalysis?: string | null;
     emotionalRegisters?: string | null;
+    boringTuesday?: string | null;
+    pissThemOff?: string | null;
   }>;
   
   groupScenarios: {
@@ -168,6 +179,8 @@ export interface MultiCharResult {
     demise?: string | null;
     psychoanalysis?: string | null;
     emotionalRegisters?: string | null;
+    boringTuesday?: string | null;
+    pissThemOff?: string | null;
   }>;
 
   groupCohesion: string;

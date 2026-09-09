@@ -14,6 +14,8 @@ function characterModuleLines(c: {
   demise?: string | null;
   psychoanalysis?: string | null;
   emotionalRegisters?: string | null;
+  boringTuesday?: string | null;
+  pissThemOff?: string | null;
 }): string {
   let md = "";
   if (c.datingProfile) md += `- **Dating Profile**: ${c.datingProfile}\n`;
@@ -22,6 +24,8 @@ function characterModuleLines(c: {
   if (c.demise) md += `- **Demise & Obituary**: ${c.demise}\n`;
   if (c.psychoanalysis) md += `- **Psychoanalysis**: ${c.psychoanalysis}\n`;
   if (c.emotionalRegisters) md += `- **Emotional Registers**: ${c.emotionalRegisters}\n`;
+  if (c.boringTuesday) md += `- **Boring Tuesday Test**: ${c.boringTuesday}\n`;
+  if (c.pissThemOff) md += `- **Three Ways to Piss Them Off**: ${c.pissThemOff}\n`;
   return md;
 }
 
@@ -95,6 +99,17 @@ export function generateAuditMarkdown(data: AnalysisResult, characterName: strin
     if (er.happy) modulesMd += `  - Happy: ${er.happy}\n`;
     if (er.grief) modulesMd += `  - Grief: ${er.grief}\n`;
     if (er.comedy) modulesMd += `  - Comedy: ${er.comedy}\n`;
+  }
+  if (data.boringTuesday) {
+    modulesMd += `- **The Boring Tuesday Test**:\n`;
+    if (data.boringTuesday.inconvenience) modulesMd += `  - Inconvenience: ${data.boringTuesday.inconvenience}\n`;
+    if (data.boringTuesday.beat) modulesMd += `  - Beat: ${data.boringTuesday.beat}\n`;
+  }
+  if (data.pissThemOff) {
+    modulesMd += `- **Three Ways to Piss Them Off**:\n`;
+    if (data.pissThemOff.trivial) modulesMd += `  - Trivial irritation: ${data.pissThemOff.trivial}\n`;
+    if (data.pissThemOff.personal) modulesMd += `  - Personal hurt: ${data.pissThemOff.personal}\n`;
+    if (data.pissThemOff.denied) modulesMd += `  - Claims it doesn't bother them: ${data.pissThemOff.denied}\n`;
   }
   if (modulesMd) {
     md += `## Immersion Modules\n${modulesMd}\n`;

@@ -47,7 +47,7 @@ export default function ImmersionModulesPanel({ m }: { m: ImmersionModulesState 
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between text-left"
+        className="w-full flex flex-wrap gap-3 items-center justify-between text-left"
       >
         <div className="flex flex-col">
           <span className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase">

@@ -28,6 +28,7 @@ function characterModuleLines(c: {
 export function generateAuditMarkdown(data: AnalysisResult, characterName: string = "Character"): string {
   let md = `# Audit Report: ${characterName}\n\n`;
 
+  if (data.requestModel) md += `Model: ${data.requestModel}\n\n`;
   md += `## Scores\n`;
   md += `- **Slop Score**: ${data.overallSlopScore}/100 (${data.slopLabel})\n`;
   md += `- **Verdict**: ${data.slopSummary}\n\n`;
@@ -107,10 +108,14 @@ export function generateAuditMarkdown(data: AnalysisResult, characterName: strin
     md += `\n`;
   }
 
+  if (data.creatorNotesBlurb) md += `## Creator Notes\n${data.creatorNotesBlurb}\n\n`;
+
   if (data.visualComparison) {
     md += `## Visual Match\n`;
     md += `- **Accuracy Score**: ${data.visualComparison.accuracyScore}/100\n`;
     md += `- **Notes**: ${data.visualComparison.gradeNotes}\n\n`;
+    for (const match of data.visualComparison.matches) md += `- Match: ${match}\n`;
+    for (const mismatch of data.visualComparison.mismatches) md += `- Mismatch: ${mismatch}\n`;
   }
 
   return md;
@@ -119,6 +124,7 @@ export function generateAuditMarkdown(data: AnalysisResult, characterName: strin
 export function generateComparisonMarkdown(data: ComparisonResult): string {
   let md = `# Comparison Report\n\n`;
 
+  if (data.requestModel) md += `Model: ${data.requestModel}\n\n`;
   md += `## Overall Verdict\n`;
   md += `${data.comparison.overallVerdict}\n\n`;
   md += `### Scorecard\n`;
@@ -148,6 +154,7 @@ export function generateComparisonMarkdown(data: ComparisonResult): string {
 export function generateGroupMarkdown(data: GroupResult): string {
   let md = `# Group Synergy Report\n\n`;
 
+  if (data.requestModel) md += `Model: ${data.requestModel}\n\n`;
   md += `## Overall Group Slop\n`;
   md += `- **Score**: ${data.groupSlopScore}/100 (${data.slopLabel})\n`;
   md += `- **Verdict**: ${data.slopSummary}\n\n`;
@@ -185,6 +192,7 @@ export function generateGroupMarkdown(data: GroupResult): string {
 export function generateMultiCharMarkdown(data: MultiCharResult, characterName: string = "Multi-Character File"): string {
   let md = `# Multi-Char / RPG Report: ${characterName}\n\n`;
 
+  if (data.requestModel) md += `Model: ${data.requestModel}\n\n`;
   md += `## Overall Group Slop\n`;
   md += `- **Score**: ${data.overallSlopScore}/100 (${data.slopLabel})\n`;
   md += `- **Verdict**: ${data.slopSummary}\n\n`;

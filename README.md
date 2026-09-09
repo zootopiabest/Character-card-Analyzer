@@ -62,3 +62,42 @@ update.
 > Before publishing, change `appId` in `capacitor.config.ts` from
 > `com.loresieve.cardanalyzer` to your own reverse-domain identifier
 > (e.g. `com.yourname.cardanalyzer`).
+
+## Model choices and report reliability
+
+OpenRouter offers Latest choices for Gemini Flash/Pro, DeepSeek Flash/Pro, and
+Claude Opus/Sonnet. These follow new releases automatically. The picker also
+keeps Claude Opus 4.6, Gemini 3.1 Pro, and Gemini 2.5 Pro pinned.
+
+Latest uses OpenRouter's native `~author/family-latest` aliases. DeepSeek Pro
+currently has no published alias, so its Latest choice checks the public model
+catalog and selects the newest standard Pro release, excluding experimental,
+vision, and batch variants. If that lookup fails, the app asks you to retry or
+choose a pinned model. Reports display and export the actual model ID when the
+provider returns it.
+
+Keys and model selections are remembered separately for each provider. The
+existing saved key migrates to the provider selected when upgrading. Custom
+endpoints require an explicit URL and model ID.
+
+Report Output Limit controls the maximum generated tokens (including reasoning
+where counted by the provider). The default is 32,768; provider limits still
+apply. Customize Thinking Effort overrides the provider's default reasoning
+settings. Turning customization off restores the provider default, which may
+still include thinking.
+
+Empty, refused, truncated, or invalid reports produce errors. Missing grades are
+never replaced with invented scores. PNG imports support Unicode card data in
+text and compressed metadata chunks, including v3 cards.
+
+## Regression checks
+
+Use Node.js 24 or newer, then run:
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+Tests mock generation requests; they do not call paid AI providers.

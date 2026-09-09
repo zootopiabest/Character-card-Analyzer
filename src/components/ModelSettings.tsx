@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { OPENROUTER_MODELS } from "../data/models";
+import { OPENROUTER_MODELS, DEFAULT_GEMINI_MODEL } from "../data/models";
+import { PROVIDERS, readProviderSettings } from "../providerSettings";
 
 // The one shared Model & API Key settings panel, used by all three input
 // modes (single audit, comparison, group). Every value persists to
@@ -16,14 +17,29 @@ function usePersisted(key: string, fallback: string) {
 }
 
 export function useModelSettings() {
-  const [provider, setProvider] = usePersisted("loresieve_selected_provider", "gemini");
-  const [model, setModel] = usePersisted("loresieve_selected_model", "gemini-3.5-flash");
-  const [apiKey, setApiKey] = usePersisted("loresieve_custom_api_key", "");
-  const [baseUrl, setBaseUrl] = usePersisted("loresieve_custom_base_url", "");
+  const [provider, setProviderState] = useState(() => localStorage.getItem("loresieve_selected_provider") || "gemini");
+  const [details, setDetails] = useState(() => readProviderSettings(localStorage, provider));
+  const setProvider = (next: string) => {
+    const loaded = readProviderSettings(localStorage, next);
+    localStorage.setItem("loresieve_selected_provider", next);
+    setProviderState(next);
+    setDetails(loaded);
+  };
+  const update = (field: "apiKey" | "model" | "baseUrl", suffix: string, value: string) => {
+    localStorage.setItem(`loresieve_${provider}_${suffix}`, value);
+    setDetails(previous => ({ ...previous, [field]: value }));
+  };
+  const { apiKey, model, baseUrl } = details;
+  const setApiKey = (value: string) => update("apiKey", "api_key", value);
+  const setModel = (value: string) => update("model", "model", value);
+  const setBaseUrl = (value: string) => update("baseUrl", "base_url", value);
+  const [outputLimit, setOutputLimit] = usePersisted("loresieve_output_limit", "32768");
   const [thinkingRaw, setThinkingRaw] = usePersisted("loresieve_thinking_mode", "false");
   const [reasoningEffort, setReasoningEffort] = usePersisted("loresieve_reasoning_effort", "medium");
 
   return {
+    outputLimit: Number(outputLimit),
+    setOutputLimit: (value: number) => setOutputLimit(String(value)),
     provider,
     setProvider,
     model,
@@ -41,16 +57,9 @@ export function useModelSettings() {
 
 export type ModelSettings = ReturnType<typeof useModelSettings>;
 
-const PROVIDERS = [
-  { id: "gemini", label: "Google Gemini", defaultModel: "gemini-3.5-flash" },
-  { id: "openrouter", label: "OpenRouter", defaultModel: OPENROUTER_MODELS[0] },
-  { id: "openai", label: "OpenAI", defaultModel: "gpt-5.5" },
-  { id: "custom", label: "Custom", defaultModel: "" },
-];
-
 export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
   const [open, setOpen] = useState(() => localStorage.getItem("loresieve_use_custom") !== "false");
-  const [isManualModel, setIsManualModel] = useState(false);
+  const [isManualModel, setIsManualModel] = useState(() => s.provider === "openrouter" && !OPENROUTER_MODELS.some(m => m.id === s.model));
   const [showKey, setShowKey] = useState(false);
 
   const toggleOpen = (v: boolean) => {
@@ -72,7 +81,7 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
 
   return (
     <div id="model-settings-panel" className="border border-[#1A1A1A] bg-[#050505] rounded-lg p-4 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col">
           <span className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase">
             Model & API Key Settings
@@ -99,16 +108,16 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
             <label className="block text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase">
               Select Provider Corridor
             </label>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               {PROVIDERS.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => {
                     s.setProvider(p.id);
-                    s.setModel(p.defaultModel);
+                    setIsManualModel(false);
                   }}
-                  className={`py-1.5 px-2.5 rounded text-[10px] font-mono text-center font-bold tracking-wider uppercase border transition-colors ${
+                  className={`min-w-0 whitespace-normal break-words py-2 px-2 rounded text-[10px] font-mono text-center font-bold tracking-wide uppercase border transition-colors ${
                     s.provider === p.id
                       ? "bg-[#0A0A0A] border-[#00F0FF] text-white"
                       : "bg-[#050505] border-[#1A1A1A] text-zinc-500 hover:text-zinc-300 hover:bg-[#0A0A0A]"
@@ -194,7 +203,8 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
                   onChange={(e) => s.setModel(e.target.value)}
                   className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded p-2 text-xs font-mono text-zinc-200 appearance-none focus:outline-none focus:border-[#00F0FF]/60 cursor-pointer"
                 >
-                  <option value="gemini-3.5-flash">gemini-3.5-flash // Balanced and Ultra-Fast (Default)</option>
+                  <option value={DEFAULT_GEMINI_MODEL}>Gemini 3.8 Flash</option>
+                  <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
                   <option value="gemini-2.5-pro">gemini-2.5-pro // Analytical Logic reasoning</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-zinc-500 font-mono text-xs">
@@ -204,7 +214,7 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
             </div>
           ) : s.provider === "openrouter" ? (
             <div className="space-y-1.5 animate-fadeIn">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <label className="block text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase">
                   Active LLM Model String
                 </label>
@@ -219,7 +229,7 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
                 </label>
               </div>
 
-              {isManualModel ? (
+              {isManualModel || !OPENROUTER_MODELS.some(m => m.id === s.model) ? (
                 <input
                   type="text"
                   value={s.model}
@@ -235,7 +245,7 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
                     className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded p-2 text-xs font-mono text-zinc-200 appearance-none focus:outline-none focus:border-[#00F0FF]/60 cursor-pointer"
                   >
                     {OPENROUTER_MODELS.map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m.id} value={m.id}>{m.label}</option>
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-zinc-500 font-mono text-xs">
@@ -244,7 +254,7 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
                 </div>
               )}
               <span className="text-[9px] leading-snug text-zinc-500 font-mono block">
-                Pick a model from the list, or check ENTER MANUALLY to type any OpenRouter model ID.
+                Latest choices follow new releases automatically. DeepSeek Pro uses a live catalog lookup; the others use OpenRouter aliases. Pinned versions stay fixed.
               </span>
             </div>
           ) : (
@@ -265,12 +275,20 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
             </div>
           )}
 
-          {/* Reasoning / Thinking Mode */}
+          <div className="space-y-1.5">
+            <label htmlFor="report-output-limit" className="block text-[10px] font-mono font-bold uppercase text-zinc-400">Report Output Limit</label>
+            <select id="report-output-limit" value={s.outputLimit} onChange={e => s.setOutputLimit(Number(e.target.value))} className="w-full min-w-0 rounded border border-[#1A1A1A] bg-[#0A0A0A] p-2 text-xs text-zinc-200">
+              {[8192, 16384, 32768, 65536].map(limit => <option key={limit} value={limit}>{limit.toLocaleString()} tokens</option>)}
+            </select>
+            <p className="text-[9px] text-zinc-500">Maximum response size, including reasoning where the provider counts it. Larger reports may cost more; model limits still apply.</p>
+          </div>
+
+          {/* Customize Thinking Effort */}
           <div className="space-y-3 pt-3 border-t border-[#1A1A1A]">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-[#00F0FF] rounded-full inline-block animate-pulse"></span>
-                Reasoning / Thinking Mode
+                Customize Thinking Effort
               </span>
               <label className="relative inline-flex items-center cursor-pointer select-none">
                 <input
@@ -305,7 +323,7 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
                   ))}
                 </div>
                 <p className="text-[9px] text-[#555] font-mono mt-2 ml-0.5">
-                  Allocates more tokens to the model's scratchpad before answering.
+                  Controls reasoning effort where supported. With this toggle off, the provider uses its default thinking settings.
                 </p>
               </div>
             )}

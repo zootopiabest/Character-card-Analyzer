@@ -10,7 +10,8 @@
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist",
     "cap:sync": "npm run build && cap sync",
-    "cap:android": "npm run build && cap sync && cap open android"
+    "cap:android": "npm run build && cap sync && cap open android",
+    "test": "node --import ./tests/register.mjs --test tests/*.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",

@@ -125,73 +125,72 @@ export function decodeBase64UTF8(base64: string): string {
   return new TextDecoder("utf-8").decode(bytes);
 }
 
-export function tryExtractCharaMetadata(arrayBuffer: ArrayBuffer): { name?: string; description?: string } | null {
+export async function tryExtractCharaMetadata(arrayBuffer: ArrayBuffer): Promise<{ name?: string; description?: string } | null> {
   const view = new DataView(arrayBuffer);
-  // Check PNG signature: 89 50 4E 47 0D 0A 1A 0A
-  if (arrayBuffer.byteLength < 8 || view.getUint32(0) !== 0x89504E47 || view.getUint32(4) !== 0x0D0A1A0A) {
-    return null;
-  }
-
+  if (arrayBuffer.byteLength < 8 || view.getUint32(0) !== 0x89504E47 || view.getUint32(4) !== 0x0D0A1A0A) return null;
+  const decoder = new TextDecoder("utf-8");
   let offset = 8;
-  const textDecoder = new TextDecoder("utf-8");
-
-  while (offset < view.byteLength) {
-    if (offset + 12 > view.byteLength) break;
+  let fallback: { name?: string; description?: string } | null = null;
+  let foundCardMetadata = false;
+  while (offset + 12 <= view.byteLength) {
     const length = view.getUint32(offset);
-    const chunkType = textDecoder.decode(new Uint8Array(arrayBuffer, offset + 4, 4));
-
-    if (chunkType === "IEND") break;
-
-    if (chunkType === "tEXt" || chunkType === "iTXt") {
-      const chunkData = new Uint8Array(arrayBuffer, offset + 8, length);
-      let nullIndex = -1;
-      for (let i = 0; i < chunkData.length; i++) {
-        if (chunkData[i] === 0) {
-          nullIndex = i;
-          break;
-        }
-      }
-      if (nullIndex !== -1) {
-        const keyword = textDecoder.decode(chunkData.subarray(0, nullIndex));
-        // Common keys used in Tavern character card formats
-        if (keyword === "chara" || keyword === "character") {
-          // Skip null separators and compression details depending on format
-          let textStart = nullIndex + 1;
-          if (chunkType === "iTXt" && textStart + 2 < chunkData.length) {
-            for (let j = textStart; j < chunkData.length; j++) {
-              if (chunkData[j] === 123) { // ASCII for '{'
-                textStart = j;
-                break;
-              }
+    if (length > view.byteLength - offset - 12) throw new Error("The PNG contains a truncated metadata chunk.");
+    const type = decoder.decode(new Uint8Array(arrayBuffer, offset + 4, 4));
+    if (type === "IEND") break;
+    if (["tEXt", "iTXt", "zTXt"].includes(type)) {
+      const data = new Uint8Array(arrayBuffer, offset + 8, length);
+      const separator = data.indexOf(0);
+      const keyword = separator >= 0 ? decoder.decode(data.subarray(0, separator)) : "";
+      if (["chara", "character", "ccv3"].includes(keyword)) {
+        foundCardMetadata = true;
+        try {
+          let start = separator + 1;
+          let compressed = false;
+          if (type === "iTXt") {
+            if (start + 2 > data.length || data[start] > 1 || data[start + 1] !== 0) throw new Error("Invalid iTXt compression header");
+            compressed = data[start] === 1;
+            start += 2;
+            // Language tag and translated keyword are each NUL-terminated.
+            for (let i = 0; i < 2; i++) {
+              const end = data.indexOf(0, start);
+              if (end < 0) throw new Error("Invalid iTXt text header");
+              start = end + 1;
             }
+          } else if (type === "zTXt") {
+            if (data[start++] !== 0) throw new Error("Unsupported PNG compression");
+            compressed = true;
           }
-
-          let rawText = textDecoder.decode(chunkData.subarray(textStart));
-          try {
-            let decodedText = rawText.trim();
-            if (!decodedText.startsWith("{")) {
-              try {
-                decodedText = decodeBase64UTF8(decodedText);
-              } catch (_) {
-              }
+          let payload: Uint8Array = data.slice(start);
+          if (compressed) {
+            const stream = new Blob([payload.slice().buffer]).stream().pipeThrough(new DecompressionStream("deflate"));
+            const reader = stream.getReader();
+            const chunks: Uint8Array[] = [];
+            let size = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              size += value.byteLength;
+              if (size > 15 * 1024 * 1024) { await reader.cancel(); throw new Error("PNG metadata exceeds the 15MB limit"); }
+              chunks.push(value);
             }
-
-            const data = JSON.parse(decodedText);
-            
-            const extracted = buildDescriptionFromJson(data);
-            if (extracted && (extracted.name || extracted.description)) {
-              return extracted;
-            }
-          } catch (e) {
-            console.warn("Detected chara tag but failed JSON decode:", e);
+            payload = new Uint8Array(size);
+            let cursor = 0;
+            for (const chunk of chunks) { payload.set(chunk, cursor); cursor += chunk.length; }
           }
+          const raw = decoder.decode(payload).trim();
+          const decoded = raw.startsWith("{") ? raw : decodeBase64UTF8(raw);
+          const extracted = buildDescriptionFromJson(JSON.parse(decoded));
+          if (keyword === "ccv3") return extracted;
+          fallback ??= extracted;
+        } catch {
+          // A PNG may carry both v2 and v3 metadata; try another matching chunk.
         }
       }
     }
-
     offset += length + 12;
   }
-  return null;
+  if (foundCardMetadata && !fallback) throw new Error("The PNG contains character metadata, but it could not be decoded. Try exporting the card as JSON.");
+  return fallback;
 }
 
 // Shared card-file reader used by all three input panels (single, comparison,
@@ -285,15 +284,19 @@ export function readCardFile(file: File, cb: CardFileCallbacks): void {
   // PNGs may carry an embedded SillyTavern character card.
   if (file.type === "image/png" || lower.endsWith(".png")) {
     const bufferReader = new FileReader();
-    bufferReader.onload = (e) => {
+    bufferReader.onload = async (e) => {
       if (e.target?.result) {
-        const extracted = tryExtractCharaMetadata(e.target.result as ArrayBuffer);
-        if (extracted && extracted.description) {
-          cb.onText?.({
-            text: extracted.description,
-            name: extracted.name,
-            source: "png-embedded",
-          });
+        try {
+          const extracted = await tryExtractCharaMetadata(e.target.result as ArrayBuffer);
+          if (extracted && extracted.description) {
+            cb.onText?.({
+              text: extracted.description,
+              name: extracted.name,
+              source: "png-embedded",
+            });
+          }
+        } catch (error) {
+          cb.onError?.(error instanceof Error ? error.message : "Failed to read PNG metadata.");
         }
       }
     };

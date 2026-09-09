@@ -25,8 +25,8 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
   const originalScore = original?.overallSlopScore ?? 50;
   const remakeScore = remake?.overallSlopScore ?? 50;
   // verdictScorecard is on a 0-10 scale (slop scores above are 0-100).
-  const scoreCard = comparison?.verdictScorecard || { originalScore: 5, remakeScore: 5 };
-  const scoreDiff = (scoreCard.remakeScore ?? 5) - (scoreCard.originalScore ?? 5);
+  const scoreCard = comparison.verdictScorecard;
+  const scoreDiff = scoreCard.remakeScore - scoreCard.originalScore;
 
   const originalSlopMeta = originalScore <= 25 ? "text-emerald-400 bg-emerald-950/20 border-emerald-500/20" : originalScore <= 60 ? "text-cyan-400 bg-cyan-950/20 border-cyan-500/20" : "text-yellow-400 bg-yellow-950/20 border-yellow-500/20";
   const remakeSlopMeta = remakeScore <= 25 ? "text-emerald-400 bg-emerald-950/20 border-emerald-500/20" : remakeScore <= 60 ? "text-cyan-400 bg-cyan-950/20 border-cyan-500/20" : "text-yellow-400 bg-yellow-950/20 border-yellow-500/20";

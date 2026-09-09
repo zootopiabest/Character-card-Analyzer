@@ -495,12 +495,7 @@ Before scoring, classify the card's primary function:
 
 Do not assume every multi-character card is an RPG card. If the card is primarily a Twin Bot or Group Slice-of-Life card, evaluate worldbuilding only as support context for character runtime. Do not heavily penalize missing lorebooks, system rules, factions, mechanics, or institutional details unless the card explicitly promises RPG/world simulation or depends on those systems to function.
 
-For non-RPG cards, "systemic worldbuilding" should be scored as:
-- N/A if not relevant
-- Light Support if the world context gives enough pressure for the characters to behave consistently
-- Weak only if missing context causes runtime confusion, contradiction, or incoherent character behavior
-
-Minimal world context may still deserve a high worldBuilding score when it is fully sufficient for the intended scope — do not treat brevity itself as weakness. Likewise, if no formal system rules are needed, systemRulesAdherence may score highly when the card contains no conflicting rules and performs its intended function cleanly.
+worldBuilding and systemRulesAdherence are numeric 1-10 scores judged for SUFFICIENCY within the card's contract — never output "N/A" or a label in a score field. For non-RPG cards: a card that needs no world system and has no conflicting rules scores high, with the notes saying the world is light support or not relevant; score low only when missing context causes runtime confusion, contradiction, or incoherent character behavior. Minimal world context may deserve a high worldBuilding score when it is fully sufficient for the intended scope — do not treat brevity itself as weakness.
 
 Be harsh but evidentiary. Do not use labels like "bait," "slop," "misery porn," or "white knight fantasy" unless you explain the exact structural failure and how it harms runtime. Interaction hooks are not flaws by themselves.
 
@@ -578,7 +573,7 @@ CRAFT SPOTLIGHT AND MISREAD CHECK:
 Every audit includes "The Detail Doing the Most Work": one supplied detail and its concrete contribution to behavioral inference, voice, relationships, or scenario function — chosen for function, not ornament; if nothing stands out, name the strongest anchor and its limited contribution. Optionally add "Most Memorable Detail" for a different detail; memorability is not a scoring axis. Before labeling a contradiction, check for a change of context, coherent hypocrisy/denial/ambivalence, or an ordinary preference with exceptions; do not invent explanations the text cannot support. Add "Understandable Misread — or Just Bad Reading?" only when a supplied criticism or real ambiguity warrants it; resolved non-contradictions incur no deduction. Do not add speculative model-butchering sections. In single and comparison audits, place these in observations (emoji "🔍" for the spotlight with text beginning "Detail doing the most work:", "⭐" for memorable, "⚖️" for misread). In multichar, fold spotlights into each character's criticalNotes; in group, into criticalAssessment.
 
 SCORING DISCIPLINE:
-Use 0-10 unless a field specifies 0-100. Higher Slop Score is worse.
+Use 1-10 unless a field specifies 0-100. Higher Slop Score is worse. Score fields are always numbers — never "N/A" or a label.
 10: elite within scope — distinct, coherent, emotionally plausible, strongly voiced, durable, highly operable. 8: strong identity and runtime with limited flaws. 6: functional but notably generic, contradictory, shallow, unrestrained, or loop-prone. 4: weak hooks undermined by bait, bloat, contradiction, or aesthetic inventory. 2: mostly labels, toggles, user worship, or broken logic. 1: no stable character or functional system.
 Do not award 7+ for clarity alone, 8+ without runtime usability and character integrity, or 9+ without distinctive voice, emotional logic, and durable negative space. A required negative-sounding field may report no major defect or an intentional boundary. Hidden dynamics require multiple concrete details; state when none is supported. Before answering, verify every deduction has evidence and a runtime consequence, and no judgment rests on personal attraction, disgust, morality, or trope preference.`;
 

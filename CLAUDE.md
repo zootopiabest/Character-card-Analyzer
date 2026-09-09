@@ -70,6 +70,7 @@ Adding a module means touching: the id list, `MODULE_PROMPTS`, the optional fiel
 
 - The owner has **zero coding background** and merges PRs themselves on GitHub — never assume a change is live until they confirm a merge. Explain things plainly.
 - This project was scaffolded in **Google AI Studio**, which is a separate, non-synced copy. Do **not** advise using AI Studio's "Sync to GitHub" — it would overwrite the repo with a stale snapshot. GitHub is the source of truth.
-- Development happens on the `claude/code-analysis-redundancy-crmpox` branch; open a fresh PR to `main` for each batch of work.
+- Open a fresh PR to `main` for each batch of work.
+- **Two release lines, by owner decision.** `main` is the **uncensored local build**: no age gate and no content refusal rule — do not add either to `main`. `public-release` is the **store/public build**: `main` plus the `AgeGate` first-launch 18+ overlay, the `MANDATORY SAFETY REFUSAL` block at the top of `SHARED_RUBRIC`, and the matching `{"refusal": ...}` detection in `aiClient.ts` `run()` (it must run before `normalizeResult`, which would otherwise reject the refusal shape as an invalid report). Keep `public-release` current by merging `main` into it; never merge it the other direction. The `ReportOutputButton` (mailto feedback) lives on both lines.
 - Header stats (DB_INDEX, LATENCY) and the loading feed are intentional cyberpunk flavor, not real telemetry. The actual "don't score everything as novel" guardrail is the `CALIBRATION BASELINE` block in `SHARED_RUBRIC` — the model never sees the UI.
 - Before publishing, `appId` in `capacitor.config.ts` (`com.loresieve.cardanalyzer`) should become the owner's own reverse-domain id.

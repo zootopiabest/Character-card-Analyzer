@@ -11,6 +11,7 @@ import ReviewStats from "./components/ReviewStats";
 import Observations from "./components/Observations";
 import VisualMatch from "./components/VisualMatch";
 import ExportButtons from "./components/ExportButtons";
+import ReportOutputButton from "./components/ReportOutputButton";
 import ImmersionSections from "./components/ImmersionSections";
 import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "./types";
 import { runAnalyze, runCompare, runGroup, runMultichar } from "./aiClient";
@@ -192,7 +193,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-[#E0E0E0] bg-[#050505] font-sans flex flex-col justify-between selection:bg-[#00F0FF]/30 selection:text-white border-4 border-[#1A1A1A]">
-      
       <div>
         {/* Main HUD Nav bar */}
         <header className="min-h-14 py-3 border-b border-[#2A2A2A] bg-[#0A0A0A] flex items-center justify-between px-6 sticky top-0 z-40">
@@ -389,7 +389,8 @@ export default function App() {
                       transition={{ duration: 0.3 }}
                       className="space-y-6"
                     >
-                      <div className="flex justify-end mb-2">
+                      <div className="flex justify-end gap-2 mb-2">
+                        <ReportOutputButton mode="audit" />
                         <ExportButtons data={analysis} type="audit" charName={extractedName} />
                       </div>
                       {/* HERO SCORE CARD: SLOP RATING */}
@@ -689,7 +690,8 @@ export default function App() {
                       transition={{ duration: 0.3 }}
                       className="mt-6"
                     >
-                      <div className="flex justify-end mb-4">
+                      <div className="flex justify-end gap-2 mb-4">
+                        <ReportOutputButton mode="comparison" />
                         <ExportButtons data={comparisonResult} type="comparison" />
                       </div>
                       <ComparisonView comparisonData={comparisonResult} />
@@ -778,7 +780,8 @@ export default function App() {
                       transition={{ duration: 0.3 }}
                       className="mt-6"
                     >
-                      <div className="flex justify-end mb-4">
+                      <div className="flex justify-end gap-2 mb-4">
+                        <ReportOutputButton mode="group" />
                         <ExportButtons data={groupResult} type="group" />
                       </div>
                       <GroupView data={groupResult} />
@@ -849,7 +852,8 @@ export default function App() {
                       transition={{ duration: 0.3 }}
                       className="space-y-6"
                     >
-                      <div className="flex justify-end mb-2">
+                      <div className="flex justify-end gap-2 mb-2">
+                        <ReportOutputButton mode="multichar" />
                         <ExportButtons data={multiCharResult} type="multichar" />
                       </div>
                       <MultiCharView data={multiCharResult} />

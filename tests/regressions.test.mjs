@@ -6,6 +6,7 @@ import { readProviderSettings } from '../src/providerSettings.ts';
 import { normalizeResult } from '../src/resultValidation.ts';
 import { tryExtractCharaMetadata } from '../src/utils.ts';
 import { runAnalyze, runCompare, runGroup, runMultichar } from '../src/aiClient.ts';
+import { buildPrompt } from '../src/systemInstructions.ts';
 
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
@@ -26,6 +27,26 @@ test('refusal, empty output, and token exhaustion never become reports', async (
     globalThis.fetch = async () => chat(content,extra);
     await assert.rejects(runAnalyze(params,cfg),expected);
   }
+});
+test('token-efficient grading sends a much smaller prompt with the same schema, modules, and standards', async () => {
+  for (const endpoint of ['analyze','compare','group','multichar']) {
+    const full = buildPrompt(endpoint, ['boringTuesday','pissThemOff']);
+    const lean = buildPrompt(endpoint, ['boringTuesday','pissThemOff'], true);
+    assert.ok(lean.length < full.length * 0.7, `${endpoint}: ${lean.length} vs ${full.length}`);
+    for (const prompt of [full, lean]) for (const marker of [/JSON SCHEMA/, /boringTuesday/, /pissThemOff/, /GREETING EVALUATION/, /CRAFT SPOTLIGHT/, /HIGHER IS WORSE/]) assert.match(prompt, marker);
+  }
+  let body;
+  globalThis.fetch = async (_url, options) => { body = JSON.parse(options.body); return chat(JSON.stringify(good())); };
+  await runAnalyze(params, cfg);
+  const fullLength = body.messages[0].content.length;
+  await runAnalyze(params, {...cfg, efficientGrading: true});
+  assert.ok(body.messages[0].content.length < fullLength * 0.7);
+});
+test('Boring Tuesday and Piss Them Off module shapes validate', () => {
+  const result = normalizeResult('analyze', {...good(), boringTuesday:{inconvenience:'Rain on laundry day',beat:'Shrugs, moves the line inside.'}, pissThemOff:{trivial:'a',personal:'b',denied:'Not established.'}});
+  assert.equal(result.pissThemOff.denied, 'Not established.');
+  for (const bad of [{...good(), boringTuesday:'nope'}, {...good(), pissThemOff:{trivial:1}}]) assert.throws(() => normalizeResult('analyze', bad), /invalid report/);
+  assert.equal(normalizeResult('group', {groupSlopScore:5,criticalAssessment:'Fine.',synergyAnalysis:{},characterBreakdowns:[{name:'A',boringTuesday:'Shrugs.',pissThemOff:'Nothing.'}],groupScenarios:{}}).characterBreakdowns[0].pissThemOff, 'Nothing.');
 });
 test('custom endpoints fail closed and normalize trailing slashes', async () => {
   const calls=[];

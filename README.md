@@ -90,6 +90,24 @@ Empty, refused, truncated, or invalid reports produce errors. Missing grades are
 never replaced with invented scores. PNG imports support Unicode card data in
 text and compressed metadata chunks, including v3 cards.
 
+## Token-Efficient Grading
+
+The Model Settings panel has a **Token-Efficient Grading** toggle. When on,
+the app sends a condensed version of the grading rubric — about 40% of the
+prompt tokens of the full one. The grading standards are the same; the
+condensed rubric just carries less worked explanation for the model to lean
+on. It suits cheap or small models. The full rubric gives stronger models more
+to reason with, so leave the toggle off when you want the most careful audit.
+
+## Immersion modules
+
+Eight optional, non-scoring sections can be toggled per mode: Dating App
+Profile, Against-Type Shopping List, Top 5 Songs, Demise & Obituary,
+Psychoanalysis, Emotional Registers, The Boring Tuesday Test (one ordinary
+inconvenience and how the character actually handles it), and Three Ways to
+Piss Them Off (a trivial irritation, a personal hurt, and something they claim
+doesn't bother them). Unchecked modules cost nothing.
+
 ## Regression checks
 
 Use Node.js 24 or newer, then run:

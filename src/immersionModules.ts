@@ -13,7 +13,9 @@ export type ImmersionModuleId =
   | "topSongs"
   | "demise"
   | "psychoanalysis"
-  | "emotionalRegisters";
+  | "emotionalRegisters"
+  | "boringTuesday"
+  | "pissThemOff";
 
 export interface ImmersionModuleMeta {
   id: ImmersionModuleId;
@@ -51,6 +53,16 @@ export const IMMERSION_MODULES: ImmersionModuleMeta[] = [
     id: "emotionalRegisters",
     label: "Emotional Registers",
     blurb: "How they react to sad, angry, happy, grief, and comedy beats.",
+  },
+  {
+    id: "boringTuesday",
+    label: "The Boring Tuesday Test",
+    blurb: "One ordinary, low-stakes inconvenience and what they actually notice, say, and do about it.",
+  },
+  {
+    id: "pissThemOff",
+    label: "Three Ways to Piss Them Off",
+    blurb: "A trivial irritation, a personal hurt, and something they claim doesn't bother them.",
   },
 ];
 

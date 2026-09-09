@@ -74,7 +74,8 @@ export default function App() {
     thinkingMode: boolean = false,
     reasoningEffort: string = "medium",
     modules: ImmersionModuleId[] = [],
-    maxOutputTokens: number = 32768
+    maxOutputTokens: number = 32768,
+    efficientGrading: boolean = false
   ) => {
     setIsLoading(true);
     setError(null);
@@ -83,7 +84,7 @@ export default function App() {
     try {
       const result = await runAnalyze(
         { description, imageBase64, imageMimeType, analyzerNotes },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading }
       );
       setAnalysis(result);
     } catch (err: any) {
@@ -108,7 +109,8 @@ export default function App() {
     thinkingMode: boolean = false,
     reasoningEffort: string = "medium",
     modules: ImmersionModuleId[] = [],
-    maxOutputTokens: number = 32768
+    maxOutputTokens: number = 32768,
+    efficientGrading: boolean = false
   ) => {
     setIsLoading(true);
     setError(null);
@@ -117,7 +119,7 @@ export default function App() {
     try {
       const result = await runCompare(
         { originalDescription, remakeDescription },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading }
       );
       setComparisonResult(result);
     } catch (err: any) {
@@ -137,7 +139,8 @@ export default function App() {
     thinkingMode: boolean = false,
     reasoningEffort: string = "medium",
     modules: ImmersionModuleId[] = [],
-    maxOutputTokens: number = 32768
+    maxOutputTokens: number = 32768,
+    efficientGrading: boolean = false
   ) => {
     setIsLoading(true);
     setError(null);
@@ -146,7 +149,7 @@ export default function App() {
     try {
       const result = await runGroup(
         { characters },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading }
       );
       setGroupResult(result);
     } catch (err: any) {
@@ -169,7 +172,8 @@ export default function App() {
     thinkingMode: boolean = false,
     reasoningEffort: string = "medium",
     modules: ImmersionModuleId[] = [],
-    maxOutputTokens: number = 32768
+    maxOutputTokens: number = 32768,
+    efficientGrading: boolean = false
   ) => {
     setIsLoading(true);
     setError(null);
@@ -178,7 +182,7 @@ export default function App() {
     try {
       const result = await runMultichar(
         { description, analyzerNotes },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading }
       );
       setMultiCharResult(result);
     } catch (err: any) {

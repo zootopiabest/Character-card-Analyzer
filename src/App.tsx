@@ -203,7 +203,7 @@ export default function App() {
           <div className="flex items-center gap-4">
             <div className="w-3 h-3 bg-[#00F0FF] rounded-full shadow-[0_0_10px_#00F0FF] animate-pulse"></div>
             <h1 className="uppercase tracking-[0.2em] text-xs font-bold text-white font-mono flex flex-wrap items-center gap-2">
-              Auditor v4.2 <span className="opacity-40">//</span> Character Performance Index
+              Auditor v{__APP_VERSION__} <span className="opacity-40">//</span> Character Performance Index
             </h1>
           </div>
           
@@ -340,7 +340,7 @@ export default function App() {
                           COMPILED_DAEMON: ACTIVE
                         </h4>
                         <p className="text-[10px] text-zinc-500 font-mono">
-                          Target Thread: LoreSieve Core v4.2
+                          Target Thread: LoreSieve Core v{__APP_VERSION__}
                         </p>
                       </div>
 
@@ -878,7 +878,7 @@ export default function App() {
           <span>COMPILER_OPTIMIZATION: 100%</span>
         </div>
         <div className="flex gap-4 items-center">
-          <span className="text-[#333]">HARSH_BUT_FAIR_ENGINE_v4.2</span>
+          <span className="text-[#333]" title="App version // build commit">ENGINE_v{__APP_VERSION__} // BUILD_{__BUILD_SHA__}</span>
           <div className="w-1.5 h-1.5 bg-[#00F0FF] rounded-full shadow-[0_0_8px_#00F0FF]"></div>
         </div>
       </footer>

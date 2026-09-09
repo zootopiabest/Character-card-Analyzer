@@ -3,9 +3,28 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
+import {execSync} from 'child_process';
+import {readFileSync} from 'fs';
+
+// The version shown in the app header comes from package.json; the build
+// hash comes from CI (GITHUB_SHA) or the local git checkout, so every deploy
+// is distinguishable even when the version was not bumped.
+const appVersion = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')).version as string;
+function buildSha(): string {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short HEAD', {stdio: ['ignore', 'pipe', 'ignore']}).toString().trim();
+  } catch {
+    return 'local';
+  }
+}
 
 export default defineConfig(() => {
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(appVersion),
+      __BUILD_SHA__: JSON.stringify(buildSha()),
+    },
     // GitHub Pages serves project sites from a sub-path; the deploy workflow
     // sets this. Local dev and the Capacitor build use the root.
     base: process.env.GITHUB_PAGES_BASE || '/',

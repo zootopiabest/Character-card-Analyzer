@@ -26,6 +26,10 @@ It installs like a normal app — no store, no account, no expiry:
 - **Desktop (Chrome / Edge):** click the install icon at the right end of the
   address bar.
 
+The version number in the header (`Auditor vX.Y.Z`) and the build hash in the
+footer change with every update, so you can tell at a glance whether a new
+version has reached your device.
+
 Your API key and settings are stored on your device only. The app shell works
 offline; analyses still need a connection to your chosen AI provider. If you
 point the custom-endpoint option at a server you run yourself (for example a

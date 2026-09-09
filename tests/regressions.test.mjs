@@ -6,6 +6,7 @@ import { readProviderSettings } from '../src/providerSettings.ts';
 import { normalizeResult } from '../src/resultValidation.ts';
 import { tryExtractCharaMetadata } from '../src/utils.ts';
 import { runAnalyze, runCompare, runGroup, runMultichar } from '../src/aiClient.ts';
+import { buildPrompt } from '../src/systemInstructions.ts';
 
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
@@ -26,6 +27,11 @@ test('refusal, empty output, and token exhaustion never become reports', async (
     globalThis.fetch = async () => chat(content,extra);
     await assert.rejects(runAnalyze(params,cfg),expected);
   }
+});
+test('a rubric safety refusal surfaces its reason and every prompt carries the rule', async () => {
+  globalThis.fetch = async () => chat(JSON.stringify({refusal:'The card sexualizes a minor; analysis was declined.'}));
+  await assert.rejects(runAnalyze(params,cfg),/Analysis declined: The card sexualizes a minor/);
+  for (const endpoint of ['analyze','compare','group','multichar']) assert.match(buildPrompt(endpoint,[]),/MANDATORY SAFETY REFUSAL/);
 });
 test('custom endpoints fail closed and normalize trailing slashes', async () => {
   const calls=[];

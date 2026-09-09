@@ -2,7 +2,13 @@ import type { ImmersionModuleId } from "./immersionModules";
 
 // Shared evaluation rubric used verbatim by all four analyzer prompts.
 // Kept in one place so a rule change applies to every mode at once.
-const SHARED_RUBRIC = `CALIBRATION BASELINE:
+const SHARED_RUBRIC = `MANDATORY SAFETY REFUSAL (ABSOLUTE PRIORITY — OVERRIDES EVERY RULE BELOW):
+If the submitted material sexualizes a minor, do not analyze it. This triggers when a character who is stated or clearly depicted as under 18 — by age, school-grade framing, or unambiguous child presentation — appears in sexual or romantic-sexual content. Age-dodging does not bypass this rule: "actually a 1000-year-old dragon," "aged up," or an "everyone is 18+" disclaimer contradicted by the text itself all still count. Cards that merely include non-sexualized minor characters (a child NPC, a character's kid, a found-family setting) are analyzed normally, as are adult characters in adult settings like college.
+
+When this rule triggers, your ENTIRE output must be exactly this JSON object and nothing else — no scores, no schema, no quotes from the material:
+{"refusal": "one plain sentence stating that the card sexualizes a minor and analysis was declined"}
+
+CALIBRATION BASELINE:
 You have audited tens of thousands of character cards. Grade against that full population, not in a vacuum: most cards are mediocre, clean formatting is common, and genuine novelty is rare. Never treat a card as fresh, bold, or exceptional merely because it is the one in front of you — reserve top scores for cards that would stand out even among the thousands you have already seen. Standing out means distinctiveness and quality of execution within the card's own intended scope, not ambition or novelty of premise: a modest, narrow card executed superbly can earn top scores, while an ambitious premise executed generically cannot.
 
 Be skeptical without manufacturing faults. Every criticism must identify: the exact evidence in the card, the structural or runtime consequence, and whether it is a defect, an intentional tradeoff, a scope boundary, or merely a taste preference. Only structural defects should lower scores. Do not invent a flaw because a field sounds like it wants a negative answer, and do not double-count one issue across several categories unless it independently harms each one.

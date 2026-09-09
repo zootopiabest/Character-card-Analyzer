@@ -38,7 +38,7 @@ test('token-efficient grading sends a much smaller prompt with the same schema, 
     const full = buildPrompt(endpoint, ['boringTuesday','pissThemOff']);
     const lean = buildPrompt(endpoint, ['boringTuesday','pissThemOff'], true);
     assert.ok(lean.length < full.length * 0.7, `${endpoint}: ${lean.length} vs ${full.length}`);
-    for (const prompt of [full, lean]) for (const marker of [/JSON SCHEMA/, /boringTuesday/, /pissThemOff/, /GREETING EVALUATION/, /CRAFT SPOTLIGHT/, /HIGHER IS WORSE/]) assert.match(prompt, marker);
+    for (const prompt of [full, lean]) for (const marker of [/JSON SCHEMA/, /boringTuesday/, /pissThemOff/, /GREETING EVALUATION/, /CRAFT SPOTLIGHT/, /HIGHER IS WORSE/, /mutually exclusive starting points/i]) assert.match(prompt, marker);
   }
   let body;
   globalThis.fetch = async (_url, options) => { body = JSON.parse(options.body); return chat(JSON.stringify(good())); };

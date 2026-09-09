@@ -11,6 +11,27 @@ Supported providers: **Google Gemini**, **OpenRouter**, **OpenAI**, and any
 **custom** OpenAI-compatible endpoint. You enter your key in the app under
 "Model & API Key Settings".
 
+## Install it as an app (iPhone, Android, desktop)
+
+The web version is published automatically from the `main` branch at:
+
+**https://zootopiabest.github.io/Character-card-Analyzer/**
+
+It installs like a normal app — no store, no account, no expiry:
+
+- **iPhone / iPad:** open the link in Safari, tap **Share**, then **Add to Home
+  Screen**.
+- **Android:** open the link in Chrome, tap the **⋮** menu, then **Install app**
+  (or **Add to Home screen**).
+- **Desktop (Chrome / Edge):** click the install icon at the right end of the
+  address bar.
+
+Your API key and settings are stored on your device only. The app shell works
+offline; analyses still need a connection to your chosen AI provider. If you
+point the custom-endpoint option at a server you run yourself (for example a
+local Ollama), that server must allow browser requests (CORS) for the web
+version to reach it — the Android APK does not have this limitation.
+
 ---
 
 ## Run it on your computer (for development)

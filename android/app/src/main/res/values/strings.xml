@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Character Card Analyzer</string>
+    <string name="title_activity_main">Character Card Analyzer</string>
+    <string name="package_name">com.loresieve.cardanalyzer</string>
+    <string name="custom_url_scheme">com.loresieve.cardanalyzer</string>
+</resources>

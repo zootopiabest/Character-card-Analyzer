@@ -274,13 +274,6 @@ async function run(
       "The AI returned malformed JSON. Retry, increase Report Output Limit, or disable optional modules. No grades were substituted."
     );
   }
-  // Safety refusal from the model (the MANDATORY SAFETY REFUSAL rule in the
-  // rubric): surface it as a plain error instead of trying to render a report.
-  // Must run before normalizeResult, which would reject the refusal shape as
-  // an invalid report and hide the real reason.
-  if (parsed && !Array.isArray(parsed) && typeof parsed.refusal === "string" && parsed.refusal.trim()) {
-    throw new Error(`Analysis declined: ${parsed.refusal.trim()}`);
-  }
   return { ...normalizeResult(endpoint, parsed), requestModel: reply.model };
 }
 

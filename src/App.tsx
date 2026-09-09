@@ -12,7 +12,6 @@ import Observations from "./components/Observations";
 import VisualMatch from "./components/VisualMatch";
 import ExportButtons from "./components/ExportButtons";
 import ReportOutputButton from "./components/ReportOutputButton";
-import AgeGate from "./components/AgeGate";
 import ImmersionSections from "./components/ImmersionSections";
 import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "./types";
 import { runAnalyze, runCompare, runGroup, runMultichar } from "./aiClient";
@@ -198,8 +197,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-[#E0E0E0] bg-[#050505] font-sans flex flex-col justify-between selection:bg-[#00F0FF]/30 selection:text-white border-4 border-[#1A1A1A]">
-      <AgeGate />
-
       <div>
         {/* Main HUD Nav bar */}
         <header className="min-h-14 py-3 border-b border-[#2A2A2A] bg-[#0A0A0A] flex items-center justify-between px-6 sticky top-0 z-40">

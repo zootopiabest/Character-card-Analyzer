@@ -1,6 +1,7 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateSync } from 'node:zlib';
+import { existsSync } from 'node:fs';
 import { selectLatestModel, OPENROUTER_MODELS, migrateModel } from '../src/data/models.ts';
 import { readProviderSettings } from '../src/providerSettings.ts';
 import { normalizeResult } from '../src/resultValidation.ts';
@@ -28,10 +29,9 @@ test('refusal, empty output, and token exhaustion never become reports', async (
     await assert.rejects(runAnalyze(params,cfg),expected);
   }
 });
-test('a rubric safety refusal surfaces its reason and every prompt carries the rule', async () => {
-  globalThis.fetch = async () => chat(JSON.stringify({refusal:'The card sexualizes a minor; analysis was declined.'}));
-  await assert.rejects(runAnalyze(params,cfg),/Analysis declined: The card sexualizes a minor/);
-  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) assert.match(buildPrompt(endpoint,[],efficient),/^MANDATORY SAFETY REFUSAL/);
+test('main carries no age gate or content refusal rule', () => {
+  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) assert.doesNotMatch(buildPrompt(endpoint,[],efficient),/MANDATORY SAFETY REFUSAL/);
+  assert.equal(existsSync(new URL('../src/components/AgeGate.tsx', import.meta.url)), false);
 });
 test('token-efficient grading sends a much smaller prompt with the same schema, modules, and standards', async () => {
   for (const endpoint of ['analyze','compare','group','multichar']) {

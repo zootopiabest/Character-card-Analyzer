@@ -1,16 +1,5 @@
 import type { ImmersionModuleId } from "./immersionModules";
 
-// public-release only: the content refusal rule. Prepended by buildPrompt to
-// EVERY prompt, full or token-efficient, so it can never be toggled away.
-// aiClient.run() detects the {"refusal": ...} shape this produces.
-const SAFETY_REFUSAL = `MANDATORY SAFETY REFUSAL (ABSOLUTE PRIORITY — OVERRIDES EVERY RULE BELOW):
-If the submitted material sexualizes a minor, do not analyze it. This triggers when a character who is stated or clearly depicted as under 18 — by age, school-grade framing, or unambiguous child presentation — appears in sexual or romantic-sexual content. Age-dodging does not bypass this rule: "actually a 1000-year-old dragon," "aged up," or an "everyone is 18+" disclaimer contradicted by the text itself all still count. Cards that merely include non-sexualized minor characters (a child NPC, a character's kid, a found-family setting) are analyzed normally, as are adult characters in adult settings like college.
-
-When this rule triggers, your ENTIRE output must be exactly this JSON object and nothing else — no scores, no schema, no quotes from the material:
-{"refusal": "one plain sentence stating that the card sexualizes a minor and analysis was declined"}
-
-`;
-
 // Shared evaluation rubric used verbatim by all four analyzer prompts.
 // Kept in one place so a rule change applies to every mode at once.
 const SHARED_RUBRIC = `CALIBRATION BASELINE:
@@ -845,13 +834,7 @@ export function buildPrompt(
   modules: ImmersionModuleId[],
   efficient: boolean = false
 ): string {
-  const base = efficient ? EFFICIENT_INSTRUCTIONS : FULL_INSTRUCTIONS;
-  const set = {
-    analyze: SAFETY_REFUSAL + base.analyze,
-    compare: SAFETY_REFUSAL + base.compare,
-    group: SAFETY_REFUSAL + base.group,
-    multichar: SAFETY_REFUSAL + base.multichar,
-  };
+  const set = efficient ? EFFICIENT_INSTRUCTIONS : FULL_INSTRUCTIONS;
   if (endpoint === "analyze") {
     return (
       set.analyze +

@@ -1,4 +1,5 @@
 export interface AnalysisResult {
+  requestModel?: string;
   overallSlopScore: number; // 0 to 100
   slopLabel: string; // e.g., "Certified Human", "Suspiciously Clean", "Blandly Synthesized", "Full AI Slop"
   slopSummary: string; // Short witty summary of the slop analysis
@@ -92,6 +93,7 @@ export interface AnalysisResult {
 }
 
 export interface GroupResult {
+  requestModel?: string;
   groupSlopScore: number;
   slopLabel: string;
   slopSummary: string;
@@ -135,6 +137,7 @@ export interface CharacterCardData {
 }
 
 export interface MultiCharResult {
+  requestModel?: string;
   overallSlopScore: number;
   slopLabel: string;
   slopSummary: string;
@@ -177,6 +180,7 @@ export interface MultiCharResult {
 }
 
 export interface ComparisonResult {
+  requestModel?: string;
   original: AnalysisResult;
   remake: AnalysisResult;
   comparison: {

@@ -7,6 +7,8 @@
 import { buildPrompt } from "./systemInstructions";
 import type { ImmersionModuleId } from "./immersionModules";
 import { safeParseJSON } from "./utils";
+import { normalizeResult } from "./resultValidation";
+import { DEFAULT_GEMINI_MODEL, DEFAULT_OPENROUTER_MODEL, selectLatestModel } from "./data/models";
 
 export type EndpointType = "analyze" | "compare" | "group" | "multichar";
 
@@ -21,7 +23,10 @@ export interface RunnerConfig {
   // the model (the schema is assembled per request), so unchecked modules
   // cost zero output tokens.
   modules?: ImmersionModuleId[];
+  maxOutputTokens?: number;
 }
+
+interface ProviderReply { text: string; model: string; }
 
 interface ImagePart {
   mimeType: string;
@@ -45,9 +50,9 @@ function providerLabel(provider: string): string {
 // strings keep working across providers.
 function normalizeModel(model: string | null | undefined, provider: string): string {
   if (!model || !model.trim()) {
-    if (provider === "openrouter") return "google/gemini-3.5-flash";
+    if (provider === "openrouter") return DEFAULT_OPENROUTER_MODEL;
     if (provider === "openai") return "gpt-5.5";
-    return "gemini-3.5-flash";
+    return DEFAULT_GEMINI_MODEL;
   }
   let m = model.trim();
   if (provider === "openrouter") {
@@ -62,11 +67,15 @@ function normalizeModel(model: string | null | undefined, provider: string): str
 }
 
 function chatCompletionsUrl(provider: string, customBaseUrl?: string | null): string {
-  if (provider === "custom" && customBaseUrl && customBaseUrl.trim()) {
-    const base = customBaseUrl.trim();
-    return base.endsWith("/chat/completions")
-      ? base
-      : base.replace(/\/+$/, "") + "/chat/completions";
+  if (provider === "custom") {
+    if (!customBaseUrl?.trim()) throw new Error("Enter the custom endpoint URL before running an analysis.");
+    let parsed: URL;
+    try { parsed = new URL(customBaseUrl.trim()); } catch { throw new Error("Enter a valid http:// or https:// custom endpoint URL."); }
+    if (!["https:", "http:"].includes(parsed.protocol) || parsed.username || parsed.password || parsed.search || parsed.hash) {
+      throw new Error("Use an http:// or https:// endpoint URL without credentials, query parameters, or a fragment.");
+    }
+    const base = parsed.href.replace(/\/+$/, "");
+    return base.endsWith("/chat/completions") ? base : base + "/chat/completions";
   }
   if (provider === "openai") return "https://api.openai.com/v1/chat/completions";
   return "https://openrouter.ai/api/v1/chat/completions";
@@ -79,7 +88,7 @@ async function callOpenAICompatible(
   userText: string,
   images: ImagePart[],
   cfg: RunnerConfig
-): Promise<string> {
+): Promise<ProviderReply> {
   const url = chatCompletionsUrl(cfg.provider, cfg.customBaseUrl);
 
   const userContent: any = images.length
@@ -112,13 +121,15 @@ async function callOpenAICompatible(
         { role: "user", content: userContent },
       ],
       ...(cfg.provider === "openai" && { response_format: { type: "json_object" } }),
-      ...(cfg.thinkingMode && { reasoning_effort: cfg.reasoningEffort || "medium" }),
+      ...(cfg.thinkingMode && (cfg.provider === "openrouter"
+        ? { reasoning: { effort: cfg.reasoningEffort || "medium", exclude: true } }
+        : { reasoning_effort: cfg.reasoningEffort || "medium" })),
       // OpenAI's newer (reasoning) models reject the legacy `max_tokens` field
       // and require `max_completion_tokens` instead. Reasoning tokens also
       // count against this budget, so give OpenAI more headroom.
       ...(cfg.provider === "openai"
-        ? { max_completion_tokens: 16384 }
-        : { max_tokens: 8192 }),
+        ? { max_completion_tokens: cfg.maxOutputTokens }
+        : { max_tokens: cfg.maxOutputTokens }),
     }),
   });
 
@@ -139,7 +150,12 @@ async function callOpenAICompatible(
   if (!json.choices?.[0]?.message) {
     throw new Error("The provider returned no usable output. Try again or switch models.");
   }
-  return json.choices[0].message.content || "{}";
+  const choice = json.choices[0];
+  if (choice.finish_reason === "length") throw new Error("The report reached its output-token limit. Increase Report Output Limit or disable some optional modules, then retry.");
+  if (choice.message.refusal || choice.finish_reason === "content_filter") throw new Error("The provider declined this analysis. No report was generated. Try a different provider or model.");
+  const content = choice.message.content;
+  if (typeof content !== "string" || !content.trim()) throw new Error("The provider returned an empty answer. No report was generated. Try again or choose another model.");
+  return { text: content, model: typeof json.model === "string" ? json.model : normalizeModel(cfg.model, cfg.provider) };
 }
 
 // Google Gemini via its REST API (works directly from the browser with an API key).
@@ -148,7 +164,7 @@ async function callGemini(
   userText: string,
   images: ImagePart[],
   cfg: RunnerConfig
-): Promise<string> {
+): Promise<ProviderReply> {
   const model = normalizeModel(cfg.model, "gemini");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model
@@ -168,10 +184,12 @@ async function callGemini(
       systemInstruction: { parts: [{ text: systemContent(endpoint, cfg) }] },
       contents: [{ role: "user", parts }],
       generationConfig: {
-        maxOutputTokens: 8192,
+        maxOutputTokens: cfg.maxOutputTokens,
         responseMimeType: "application/json",
-        // -1 = let the model decide its own thinking budget when thinking is on.
-        ...(cfg.thinkingMode && { thinkingConfig: { thinkingBudget: -1 } }),
+        // Gemini 2.5 uses token budgets; Gemini 3 uses thinking levels.
+        ...(cfg.thinkingMode && { thinkingConfig: model.startsWith("gemini-2.5-")
+          ? { thinkingBudget: Math.min(({ low: 1024, medium: 8192, high: 16384 }[cfg.reasoningEffort || "medium"] || 8192), Math.max(128, (cfg.maxOutputTokens || 32768) - 1024)) }
+          : { thinkingLevel: cfg.reasoningEffort || "medium" } }),
       },
     }),
   });
@@ -190,73 +208,15 @@ async function callGemini(
   }
 
   const json: any = await res.json();
-  const text = (json.candidates?.[0]?.content?.parts || [])
+  const candidate = json.candidates?.[0];
+  if (candidate?.finishReason === "MAX_TOKENS") throw new Error("The report reached its output-token limit. Increase Report Output Limit or disable some optional modules, then retry.");
+  if (json.promptFeedback?.blockReason || (candidate?.finishReason && candidate.finishReason !== "STOP")) throw new Error("Gemini did not complete this analysis. Try another model or provider.");
+  const text = (candidate?.content?.parts || [])
+    .filter((p: any) => !p.thought)
     .map((p: any) => p.text || "")
     .join("");
-  return text || "{}";
-}
-
-// Models sometimes omit fields or return null where the UI expects an array.
-// Coerce the known list/object fields to safe defaults so rendering and export
-// can never crash on a missing field.
-const asArray = (v: any): any[] => (Array.isArray(v) ? v : []);
-const asObject = (v: any): any => (v && typeof v === "object" ? v : {});
-
-function normalizeAnalysis(d: any): any {
-  const data = asObject(d);
-  data.observations = asArray(data.observations);
-  if (data.visualComparison) {
-    data.visualComparison.matches = asArray(data.visualComparison.matches);
-    data.visualComparison.mismatches = asArray(data.visualComparison.mismatches);
-  }
-  // Optional immersion modules: coerce present-but-malformed shapes so the
-  // views can trust `items`/`songs` arrays and object sub-fields.
-  if (data.shoppingList) {
-    data.shoppingList = asObject(data.shoppingList);
-    data.shoppingList.items = asArray(data.shoppingList.items);
-  }
-  if (data.topSongs) {
-    data.topSongs = asArray(data.topSongs);
-  }
-  if (data.demise) {
-    data.demise = asObject(data.demise);
-  }
-  if (data.emotionalRegisters) {
-    data.emotionalRegisters = asObject(data.emotionalRegisters);
-  }
-  return data;
-}
-
-function normalizeResult(endpoint: EndpointType, d: any): any {
-  if (endpoint === "analyze") return normalizeAnalysis(d);
-  if (endpoint === "compare") {
-    const data = asObject(d);
-    data.original = normalizeAnalysis(data.original);
-    data.remake = normalizeAnalysis(data.remake);
-    data.comparison = asObject(data.comparison);
-    data.comparison.whatImproved = asArray(data.comparison.whatImproved);
-    data.comparison.whatRegressed = asArray(data.comparison.whatRegressed);
-    data.comparison.verdictScorecard = asObject(data.comparison.verdictScorecard);
-    return data;
-  }
-  if (endpoint === "group") {
-    const data = asObject(d);
-    data.synergyAnalysis = asObject(data.synergyAnalysis);
-    data.synergyAnalysis.redundancyWarnings = asArray(data.synergyAnalysis.redundancyWarnings);
-    data.characterBreakdowns = asArray(data.characterBreakdowns);
-    data.groupScenarios = asObject(data.groupScenarios);
-    return data;
-  }
-  // multichar
-  const data = asObject(d);
-  data.characterAssessments = asArray(data.characterAssessments);
-  data.worldAndSystemAnalysis = asObject(data.worldAndSystemAnalysis);
-  data.worldAndSystemAnalysis.worldBuilding = asObject(data.worldAndSystemAnalysis.worldBuilding);
-  data.worldAndSystemAnalysis.systemRulesAdherence = asObject(
-    data.worldAndSystemAnalysis.systemRulesAdherence
-  );
-  data.playScenarios = asObject(data.playScenarios);
-  return data;
+  if (!text.trim()) throw new Error("Gemini returned an empty answer. No report was generated. Try again or choose another model.");
+  return { text, model };
 }
 
 async function run(
@@ -270,19 +230,49 @@ async function run(
       "No API key set. Open the 'Model & API Key Settings' panel, choose your provider, and paste your own API key."
     );
   }
-  const raw =
+  if (!["gemini", "openrouter", "openai", "custom"].includes(cfg.provider)) throw new Error("Select a supported provider.");
+  // Validate the destination before any request, including model discovery.
+  if (cfg.provider === "custom") {
+    chatCompletionsUrl(cfg.provider, cfg.customBaseUrl);
+    if (!cfg.model?.trim()) throw new Error("Enter your custom endpoint’s exact model ID.");
+  }
+  let model = normalizeModel(cfg.model, cfg.provider);
+  let maxOutputTokens = cfg.maxOutputTokens ?? (endpoint === "analyze" ? 16384 : 32768);
+  if (!Number.isInteger(maxOutputTokens) || maxOutputTokens < 1024 || maxOutputTokens > 131072) throw new Error("Report Output Limit must be between 1,024 and 131,072 tokens.");
+  if (model.startsWith("~") && cfg.provider !== "openrouter") throw new Error("OpenRouter latest aliases require the OpenRouter provider.");
+  if (model.startsWith("latest:")) {
+    if (cfg.provider !== "openrouter") throw new Error("Latest model choices require the OpenRouter provider.");
+    let catalog: any;
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/models", { signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw new Error("catalog unavailable");
+      catalog = await response.json();
+    } catch {
+      throw new Error("Could not check OpenRouter’s latest models. Retry or select a pinned model; no analysis request was sent.");
+    }
+    if (!Array.isArray(catalog?.data)) throw new Error("OpenRouter returned an invalid model catalog. Choose a pinned model or retry.");
+    const resolved = selectLatestModel(model, catalog.data);
+    model = resolved.id;
+    const ceiling = resolved.top_provider?.max_completion_tokens;
+    if (typeof ceiling === "number" && ceiling > 0) maxOutputTokens = Math.min(maxOutputTokens, ceiling);
+    if (images.length && resolved.architecture?.input_modalities && !resolved.architecture.input_modalities.includes("image")) {
+      throw new Error(`${model} does not accept images. Remove the art for a text-only audit, or choose a vision-capable model.`);
+    }
+  }
+  cfg = { ...cfg, model, maxOutputTokens };
+  const reply =
     cfg.provider === "gemini"
       ? await callGemini(endpoint, userText, images, cfg)
       : await callOpenAICompatible(endpoint, userText, images, cfg);
   let parsed: any;
   try {
-    parsed = safeParseJSON(raw);
+    parsed = safeParseJSON(reply.text);
   } catch {
     throw new Error(
-      "The AI's reply came back incomplete or malformed — usually the response got cut off. Run it again; if it keeps happening, try a shorter card or a different model."
+      "The AI returned malformed JSON. Retry, increase Report Output Limit, or disable optional modules. No grades were substituted."
     );
   }
-  return normalizeResult(endpoint, parsed);
+  return { ...normalizeResult(endpoint, parsed), requestModel: reply.model };
 }
 
 function analyzerNotesBlock(notes: string | null | undefined): string {

@@ -11,12 +11,13 @@ A client-only React/Vite app that uses an LLM as a judge to rate AI-roleplay "ch
 ```bash
 npm install          # install deps
 npm run dev          # dev server at http://localhost:5173
-npm run lint         # tsc --noEmit — the ONLY check; there is no test suite and no ESLint
+npm run lint         # tsc --noEmit
+npm test             # Node 24 regression tests; mocked providers, no API charges
 npm run build        # tsc-less vite production build into dist/
 npm run cap:android  # build + cap sync + open Android Studio (APK build happens in Studio)
 ```
 
-There are **no tests**. After any change, run `npm run lint` and `npm run build` — a green build is the bar. The build emits a >500 kB chunk-size warning; that is expected, not a regression.
+After any change, run `npm test`, `npm run lint`, and `npm run build`. Tests require Node 24 or newer. The build emits a >500 kB chunk-size warning; that is expected, not a regression.
 
 ## Architecture
 
@@ -37,7 +38,7 @@ Note `CardInput` is reused for both `audit` and `multichar` modes — in multich
 Provider-specific quirks live **only** here and must stay there:
 - **OpenAI** requires `max_completion_tokens` (not `max_tokens`, which its reasoning models reject) and takes `response_format: json_object`.
 - **OpenRouter** model slugs are lowercase + case-sensitive; `normalizeModel()` lowercases them.
-- Every raw response goes through `safeParseJSON()` (strips markdown fences, extracts the first `{…}`/`[…]`) then `normalizeResult()`, which coerces expected arrays/objects to safe defaults so a model that omits a field can't crash a view. When adding a field a view reads directly (e.g. `data.x.y.score`), add a matching guard in `normalizeResult()`.
+- Every raw response goes through `safeParseJSON()` (strips markdown fences, extracts the first `{…}`/`[…]`) then `normalizeResult()` in `src/resultValidation.ts`, which validates required grades and rendered field types before a view receives them. Missing required grades, empty answers, refusals, and truncation are errors; never invent fallback grades. When adding a field a view reads directly (e.g. `data.x.y.score`), add a matching guard in `normalizeResult()`.
 
 ### The prompts (`src/systemInstructions.ts`)
 
@@ -52,7 +53,7 @@ Six extra creative sections (dating profile, against-type shopping list, top son
 - `MODULE_PROMPTS` in `src/systemInstructions.ts` — per-module ask text + schema fragments (rich shapes for audit/comparison, compact per-character strings for group/multichar).
 - `src/components/ImmersionSections.tsx` (solo results) and `src/components/CharacterModuleLines.tsx` (roster entries) — the renderers; every field is optional, render nothing when absent.
 
-Adding a module means touching: the id list, `MODULE_PROMPTS`, the optional fields in `types.ts`, guards in `normalizeAnalysis()` if the shape is non-string, the two renderers, and `exportUtils.ts`. The rubric already declares all modules **non-scoring** — keep new ones under that rule.
+Adding a module means touching: the id list, `MODULE_PROMPTS`, the optional fields in `types.ts`, guards in `resultValidation.ts` if the shape is non-string, the two renderers, and `exportUtils.ts`. The rubric already declares all modules **non-scoring** — keep new ones under that rule.
 
 ### Score scales (easy to get wrong)
 
@@ -60,10 +61,10 @@ Adding a module means touching: the id list, `MODULE_PROMPTS`, the optional fiel
 
 ### Shared building blocks (use these, don't re-inline)
 
-- **`src/components/ModelSettings.tsx`** — the one provider/model/key/base-URL/thinking-mode panel, rendered by all three input components via `<ModelSettingsPanel s={settings}/>`. State comes from the `useModelSettings()` hook, which **persists every field to `localStorage` on change** (not on submit) under `loresieve_*` keys, so a key entered in one mode is instantly available in the others. Input components read the current values off `settings` at submit time — never null out the key based on the panel's open/closed state.
-- **`src/utils.ts` `readCardFile()`** — the single file reader for all inputs. Handles JSON (via `buildDescriptionFromJson`), .txt/.md/.rtf, .docx (mammoth, **dynamically imported** to keep it out of the initial bundle), and PNGs with embedded SillyTavern `chara` metadata (`tryExtractCharaMetadata` parses PNG `tEXt`/`iTXt` chunks, base64-decoding when needed). Callbacks: `onText` (with a `source` discriminator), `onImage`, `onError`.
+- **`src/components/ModelSettings.tsx`** — the one provider/model/key/base-URL/thinking-mode panel, rendered by all three input components via `<ModelSettingsPanel s={settings}/>`. State comes from the `useModelSettings()` hook, which **persists every field to `localStorage` on change** (not on submit). Provider keys, model selections, and base URLs use separate `loresieve_<provider>_*` keys, with legacy migration in `providerSettings.ts`, so a key entered in one mode is instantly available in the others. Input components read the current values off `settings` at submit time — never null out the key based on the panel's open/closed state.
+- **`src/utils.ts` `readCardFile()`** — the single file reader for all inputs. Handles JSON (via `buildDescriptionFromJson`), .txt/.md/.rtf, .docx (mammoth, **dynamically imported** to keep it out of the initial bundle), and PNGs with embedded SillyTavern `chara` metadata (async `tryExtractCharaMetadata` parses PNG `tEXt`/`iTXt`/`zTXt` chunks and prefers `ccv3` metadata, base64-decoding when needed). Callbacks: `onText` (with a `source` discriminator), `onImage`, `onError`.
 - **`src/scoreMeta.ts` `getSlopScoreMeta()`** — shared color/style for the 0–100 hero score cards.
-- **`src/data/models.ts` `OPENROUTER_MODELS`** — the single source for the OpenRouter dropdown and its default (`OPENROUTER_MODELS[0]`).
+- **`src/data/models.ts` `OPENROUTER_MODELS`** — the single source for labeled OpenRouter choices and `DEFAULT_OPENROUTER_MODEL`. Use verified native `~author/family-latest` aliases; DeepSeek Pro alone uses a catalog selector because it has no published alias. Report `requestModel` is the concrete response model when the provider supplies it.
 
 ## Repo / workflow notes
 

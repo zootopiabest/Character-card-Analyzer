@@ -72,7 +72,8 @@ export default function App() {
     analyzerNotes: string | null = null,
     thinkingMode: boolean = false,
     reasoningEffort: string = "medium",
-    modules: ImmersionModuleId[] = []
+    modules: ImmersionModuleId[] = [],
+    maxOutputTokens: number = 32768
   ) => {
     setIsLoading(true);
     setError(null);
@@ -81,7 +82,7 @@ export default function App() {
     try {
       const result = await runAnalyze(
         { description, imageBase64, imageMimeType, analyzerNotes },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens }
       );
       setAnalysis(result);
     } catch (err: any) {
@@ -105,7 +106,8 @@ export default function App() {
     customBaseUrl: string | null = null,
     thinkingMode: boolean = false,
     reasoningEffort: string = "medium",
-    modules: ImmersionModuleId[] = []
+    modules: ImmersionModuleId[] = [],
+    maxOutputTokens: number = 32768
   ) => {
     setIsLoading(true);
     setError(null);
@@ -114,7 +116,7 @@ export default function App() {
     try {
       const result = await runCompare(
         { originalDescription, remakeDescription },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens }
       );
       setComparisonResult(result);
     } catch (err: any) {
@@ -133,7 +135,8 @@ export default function App() {
     customBaseUrl: string | null = null,
     thinkingMode: boolean = false,
     reasoningEffort: string = "medium",
-    modules: ImmersionModuleId[] = []
+    modules: ImmersionModuleId[] = [],
+    maxOutputTokens: number = 32768
   ) => {
     setIsLoading(true);
     setError(null);
@@ -142,7 +145,7 @@ export default function App() {
     try {
       const result = await runGroup(
         { characters },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens }
       );
       setGroupResult(result);
     } catch (err: any) {
@@ -164,7 +167,8 @@ export default function App() {
     analyzerNotes: string | null = null,
     thinkingMode: boolean = false,
     reasoningEffort: string = "medium",
-    modules: ImmersionModuleId[] = []
+    modules: ImmersionModuleId[] = [],
+    maxOutputTokens: number = 32768
   ) => {
     setIsLoading(true);
     setError(null);
@@ -173,7 +177,7 @@ export default function App() {
     try {
       const result = await runMultichar(
         { description, analyzerNotes },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens }
       );
       setMultiCharResult(result);
     } catch (err: any) {
@@ -191,10 +195,10 @@ export default function App() {
       
       <div>
         {/* Main HUD Nav bar */}
-        <header className="h-14 border-b border-[#2A2A2A] bg-[#0A0A0A] flex items-center justify-between px-6 sticky top-0 z-40">
+        <header className="min-h-14 py-3 border-b border-[#2A2A2A] bg-[#0A0A0A] flex items-center justify-between px-6 sticky top-0 z-40">
           <div className="flex items-center gap-4">
             <div className="w-3 h-3 bg-[#00F0FF] rounded-full shadow-[0_0_10px_#00F0FF] animate-pulse"></div>
-            <h1 className="uppercase tracking-[0.2em] text-xs font-bold text-white font-mono flex items-center gap-2">
+            <h1 className="uppercase tracking-[0.2em] text-xs font-bold text-white font-mono flex flex-wrap items-center gap-2">
               Auditor v4.2 <span className="opacity-40">//</span> Character Performance Index
             </h1>
           </div>
@@ -213,7 +217,7 @@ export default function App() {
           <div className="border border-[#1A1A1A] bg-[#0A0A0A] p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-[#00F0FF]"></div>
             <div className="space-y-1 pl-2">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[#00F0FF] text-[10px] font-mono tracking-wider">[ RUNTIME_MANDATE ]</span>
                 <span className="text-xs font-bold text-zinc-200">Non-Academic Instruction Auditor</span>
               </div>
@@ -223,14 +227,15 @@ export default function App() {
             </div>
 
             {/* MODE SWITCHER PILL */}
-            <div className="flex bg-black border border-[#1A1A1A] p-1 rounded-lg shrink-0 select-none">
+            <div className="grid grid-cols-2 sm:grid-cols-4 w-full md:w-auto min-w-0 bg-black border border-[#1A1A1A] p-1 rounded-lg select-none">
               <button
                 type="button"
                 onClick={() => {
                   setAppMode("audit");
                   setError(null);
                 }}
-                className={`px-3 py-1.5 rounded font-mono text-[10px] uppercase tracking-wider transition-all ${
+                disabled={isLoading}
+                className={`min-w-0 px-2 py-2 rounded font-mono text-[10px] uppercase tracking-wider transition-all ${
                   appMode === "audit"
                     ? "bg-[#111] text-[#00F0FF] font-bold shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)] border border-[#222]"
                     : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -244,7 +249,8 @@ export default function App() {
                   setAppMode("comparison");
                   setError(null);
                 }}
-                className={`px-3 py-1.5 rounded font-mono text-[10px] uppercase tracking-wider transition-all ${
+                disabled={isLoading}
+                className={`min-w-0 px-2 py-2 rounded font-mono text-[10px] uppercase tracking-wider transition-all ${
                   appMode === "comparison"
                     ? "bg-[#111] text-cyan-400 font-bold shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)] border border-[#222]"
                     : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -258,7 +264,8 @@ export default function App() {
                   setAppMode("group");
                   setError(null);
                 }}
-                className={`px-3 py-1.5 rounded font-mono text-[10px] uppercase tracking-wider transition-all ${
+                disabled={isLoading}
+                className={`min-w-0 px-2 py-2 rounded font-mono text-[10px] uppercase tracking-wider transition-all ${
                   appMode === "group"
                     ? "bg-[#111] text-purple-400 font-bold shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)] border border-[#222]"
                     : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -272,7 +279,8 @@ export default function App() {
                   setAppMode("multichar");
                   setError(null);
                 }}
-                className={`px-3 py-1.5 rounded font-mono text-[10px] uppercase tracking-wider transition-all ${
+                disabled={isLoading}
+                className={`min-w-0 px-2 py-2 rounded font-mono text-[10px] uppercase tracking-wider transition-all ${
                   appMode === "multichar"
                     ? "bg-[#111] text-emerald-400 font-bold shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)] border border-[#222]"
                     : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -297,7 +305,7 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
               {/* LEFT PANEL: Inputs, Uploads and Actions */}
-              <div className="lg:col-span-5 space-y-6">
+              <div className="min-w-0 lg:col-span-5 space-y-6">
                 <div className="border border-[#1A1A1A] bg-[#0A0A0A] p-6 rounded-xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 h-10 w-10 bg-gradient-to-bl from-[#00F0FF]/5 to-transparent pointer-events-none" />
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#777] flex items-center gap-2 mb-4">
@@ -308,7 +316,7 @@ export default function App() {
               </div>
 
               {/* RIGHT PANEL: Outputs and Analysis Card views */}
-              <div className="lg:col-span-7">
+              <div className="min-w-0 lg:col-span-7">
                 <AnimatePresence mode="wait">
                   {isLoading && (
                     <motion.div

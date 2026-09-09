@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 
 interface StatProps {
-  score: number;
+  score: number | null;
   level: string;
   notes: string;
 }
@@ -15,12 +15,13 @@ interface CoreAnalysis {
 }
 
 export default function ReviewStats({ stats }: { stats: CoreAnalysis }) {
-  const getSafely = (key: string, fallbackScore = 5, fallbackLabel = "N/A", fallbackNotes = "Diagnostic readout unavailable."): StatProps => {
-    const value = stats && stats[key];
+  const getSafely = (key: string): StatProps => {
+    const value = stats?.[key];
+    const valid = typeof value?.score === "number" && Number.isFinite(value.score) && value.score >= 0 && value.score <= 10;
     return {
-      score: typeof value?.score === 'number' ? value.score : fallbackScore,
-      level: typeof value?.level === 'string' ? value.level : fallbackLabel,
-      notes: typeof value?.notes === 'string' ? value.notes : fallbackNotes,
+      score: valid ? value.score : null,
+      level: valid && typeof value?.level === "string" ? value.level : "NOT EVALUATED",
+      notes: valid && typeof value?.notes === "string" ? value.notes : "The model did not supply a valid assessment.",
     };
   };
 
@@ -28,7 +29,7 @@ export default function ReviewStats({ stats }: { stats: CoreAnalysis }) {
     {
       key: "originality",
       title: "ORIGINALITY INDEX",
-      data: getSafely("originality", 7, "AUTHENTIC", "No reference templates matches detected."),
+      data: getSafely("originality"),
       color: "bg-[#00F0FF]",
       bgClass: "bg-[#0F0F0F] border-[#1A1A1A]",
       textClass: "text-[#00F0FF] border-[#00F0FF]/25"
@@ -36,7 +37,7 @@ export default function ReviewStats({ stats }: { stats: CoreAnalysis }) {
     {
       key: "negativeSpace",
       title: "NEGATIVE SPACE",
-      data: getSafely("negativeSpace", 6, "OPTIMAL", "Maintains clean structural balance."),
+      data: getSafely("negativeSpace"),
       color: "bg-white",
       bgClass: "bg-[#0F0F0F] border-[#1A1A1A]",
       textClass: "text-zinc-200 border-zinc-700/50"
@@ -44,7 +45,7 @@ export default function ReviewStats({ stats }: { stats: CoreAnalysis }) {
     {
       key: "cohesion",
       title: "INSTRUCTION COHESION",
-      data: getSafely("cohesion", 7.5, "BALANCED", "Instructions reinforce character archetype smoothly."),
+      data: getSafely("cohesion"),
       color: "bg-[#00F0FF]",
       bgClass: "bg-[#0F0F0F] border-[#1A1A1A]",
       textClass: "text-[#00F0FF] border-[#00F0FF]/25"
@@ -52,7 +53,7 @@ export default function ReviewStats({ stats }: { stats: CoreAnalysis }) {
     {
       key: "tropeUsage",
       title: "TROPE EXECUTION",
-      data: getSafely("tropeUsage", 6.5, "CONVENTIONAL", "Classic character tropes used efficiently without overhead."),
+      data: getSafely("tropeUsage"),
       color: "bg-[#FACC15]",
       bgClass: "bg-[#0F0F0F] border-[#1A1A1A]",
       textClass: "text-[#FACC15] border-[#FACC15]/20"
@@ -60,7 +61,7 @@ export default function ReviewStats({ stats }: { stats: CoreAnalysis }) {
     {
       key: "creatorCraft",
       title: "CREATOR CRAFT",
-      data: getSafely("creatorCraft", 5, "COMPETENT", "Neutral evaluation or no custom metrics extracted."),
+      data: getSafely("creatorCraft"),
       color: "bg-gradient-to-r from-purple-500 to-indigo-500",
       bgClass: "bg-[#0F0F0F] border-[#1A1A1A]",
       textClass: "text-purple-400 border-purple-500/20"
@@ -80,7 +81,7 @@ export default function ReviewStats({ stats }: { stats: CoreAnalysis }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {items.map((item, idx) => {
-          const scorePercent = Math.min(100, Math.max(0, item.data.score * 10));
+          const scorePercent = Math.min(100, Math.max(0, (item.data.score ?? 0) * 10));
           return (
             <motion.div
               key={item.key}
@@ -91,7 +92,7 @@ export default function ReviewStats({ stats }: { stats: CoreAnalysis }) {
               className={`p-5 rounded-xl border ${item.bgClass} flex flex-col justify-between`}
             >
               <div>
-                <div className="flex justify-between items-start mb-1">
+                <div className="flex flex-wrap gap-2 justify-between items-start mb-1">
                   <span className="text-[10px] font-mono tracking-widest text-zinc-500 font-bold uppercase">
                     {item.title}
                   </span>
@@ -102,7 +103,7 @@ export default function ReviewStats({ stats }: { stats: CoreAnalysis }) {
                 
                 <div className="flex items-baseline gap-1 mt-2 mb-3">
                   <span className="text-4xl font-black font-mono tracking-tighter text-white">
-                    {item.data.score}
+                    {item.data.score ?? "—"}
                   </span>
                   <span className="text-[10px] text-zinc-500 font-mono">/10</span>
                 </div>

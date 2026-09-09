@@ -47,7 +47,8 @@ export default function ExportButtons({ data, type, charName }: ExportButtonsPro
   };
 
   return (
-    <div className="relative inline-block text-left relative z-50">
+    <div className="relative min-w-0 text-left z-50">
+      {typeof data.requestModel === "string" && <p className="mb-2 text-[10px] font-mono text-zinc-400 [overflow-wrap:anywhere]">Model: {data.requestModel}</p>}
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 bg-[#1A1A1A] hover:bg-[#222] border border-[#333] text-zinc-300 font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 rounded transition-all shadow-sm"

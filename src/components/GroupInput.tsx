@@ -14,7 +14,8 @@ interface GroupInputProps {
     customBaseUrl: string | null,
     thinkingMode?: boolean,
     reasoningEffort?: string,
-    modules?: ImmersionModuleId[]
+    modules?: ImmersionModuleId[],
+    maxOutputTokens?: number
   ) => void;
   isLoading: boolean;
 }
@@ -104,7 +105,8 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
       settings.baseUrl.trim() || null,
       settings.thinkingMode,
       settings.reasoningEffort,
-      immersion.enabled
+      immersion.enabled,
+      settings.outputLimit
     );
   };
 

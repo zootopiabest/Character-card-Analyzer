@@ -19,7 +19,8 @@ interface ComparisonInputProps {
     customBaseUrl: string | null,
     thinkingMode?: boolean,
     reasoningEffort?: string,
-    modules?: ImmersionModuleId[]
+    modules?: ImmersionModuleId[],
+    maxOutputTokens?: number
   ) => void;
   isLoading: boolean;
 }
@@ -67,6 +68,12 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
     readCardFile(file, {
       onText: ({ text, name, source }) => {
         setDesc(text);
+        if (source !== "png-embedded") {
+          setImgPreview(null);
+          setImgBase64(null);
+          setImgMimeType(null);
+          setExtractedName(name || null);
+        }
         if (source === "json" || source === "png-embedded") {
           setExtractedName(name || (isOriginal ? "Original Character" : "Remade Character"));
         }
@@ -132,7 +139,8 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
       settings.baseUrl,
       settings.thinkingMode,
       settings.reasoningEffort,
-      immersion.enabled
+      immersion.enabled,
+      settings.outputLimit
     );
   };
 

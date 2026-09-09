@@ -18,7 +18,8 @@ interface CardInputProps {
     analyzerNotes?: string | null,
     thinkingMode?: boolean,
     reasoningEffort?: string,
-    modules?: ImmersionModuleId[]
+    modules?: ImmersionModuleId[],
+    maxOutputTokens?: number
   ) => void;
   isLoading: boolean;
   onNameExtracted?: (name: string | null) => void;
@@ -78,6 +79,7 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
           // Plain text / document uploads replace everything.
           clearImageState();
           setExtractedName(null);
+          onNameExtracted?.(null);
           setShowExtractedBanner(false);
         }
       },
@@ -138,7 +140,8 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
       analyzerNotes.trim() ? analyzerNotes : null,
       settings.thinkingMode,
       settings.reasoningEffort,
-      immersion.enabled
+      immersion.enabled,
+      settings.outputLimit
     );
   };
 
@@ -182,11 +185,11 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
                     className="h-full w-full object-cover animate-pulse"
                   />
                 </div>
-                <div className="flex-grow space-y-1 overflow-hidden">
+                <div className="w-full min-w-0 sm:flex-1 space-y-1">
                   <div className="flex items-center gap-1.5 text-[#00F0FF] text-[10px] font-mono font-bold uppercase">
-                    <CheckCircle2 size={12} /> PNG_DATA_VERIFIED
+                    <CheckCircle2 size={12} /> ART_ATTACHED
                   </div>
-                  <p className="text-xs font-semibold text-zinc-200 truncate font-mono uppercase">
+                  <p className="text-xs font-semibold text-zinc-200 whitespace-normal [overflow-wrap:anywhere] font-mono uppercase">
                     {imageFileName || "character_art.png"}
                   </p>
                   <p className="text-[10px] text-zinc-500 leading-relaxed font-sans">
@@ -215,7 +218,7 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
                 </div>
                 <div>
                   <p className="text-xs font-mono uppercase text-zinc-400">
-                    DRAG_CARD_PNG_OR_CLICK_TO_ATTACH
+                    Drop a card or click to attach
                   </p>
                   <p className="text-[9px] text-[#555] font-mono mt-1">
                     Accepts PNG/JPG illustration or standard V2/SillyTavern PNG card
@@ -229,7 +232,7 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
           {showExtractedBanner && extractedName && (
             <div id="metadata-extracted-alert" className="mt-3 flex items-start gap-2.5 bg-[#0A0A0A] border border-[#00F0FF]/25 p-3 rounded-lg text-cyan-200">
               <Sparkles size={14} className="text-[#00F0FF] flex-shrink-0 mt-0.5" />
-              <div className="text-[11px] space-y-0.5">
+              <div className="min-w-0 text-[11px] space-y-0.5 [overflow-wrap:anywhere]">
                 <span className="font-bold text-[#00F0FF] font-mono uppercase text-[10px]">Tavern Metadata Extracted!</span>
                 <p className="opacity-90 leading-relaxed font-sans text-zinc-300">
                   Found integrated character data for <strong className="text-white font-mono">&ldquo;{extractedName}&rdquo;</strong> inside PNG chunks. All greetings and lorebook entries loaded under the hood.

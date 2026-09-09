@@ -36,8 +36,11 @@ export function useModelSettings() {
   const [outputLimit, setOutputLimit] = usePersisted("loresieve_output_limit", "32768");
   const [thinkingRaw, setThinkingRaw] = usePersisted("loresieve_thinking_mode", "false");
   const [reasoningEffort, setReasoningEffort] = usePersisted("loresieve_reasoning_effort", "medium");
+  const [efficientRaw, setEfficientRaw] = usePersisted("loresieve_efficient_grading", "false");
 
   return {
+    efficientGrading: efficientRaw === "true",
+    setEfficientGrading: (v: boolean) => setEfficientRaw(v ? "true" : "false"),
     outputLimit: Number(outputLimit),
     setOutputLimit: (value: number) => setOutputLimit(String(value)),
     provider,
@@ -281,6 +284,28 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
               {[8192, 16384, 32768, 65536].map(limit => <option key={limit} value={limit}>{limit.toLocaleString()} tokens</option>)}
             </select>
             <p className="text-[9px] text-zinc-500">Maximum response size, including reasoning where the provider counts it. Larger reports may cost more; model limits still apply.</p>
+          </div>
+
+          {/* Token-Efficient Grading */}
+          <div className="space-y-2 pt-3 border-t border-[#1A1A1A]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#FACC15] rounded-full inline-block"></span>
+                Token-Efficient Grading
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={s.efficientGrading}
+                  onChange={(e) => s.setEfficientGrading(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-[#1A1A1A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-600 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FACC15]/30 peer-checked:after:bg-[#FACC15] peer-checked:after:border-transparent"></div>
+              </label>
+            </div>
+            <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">
+              Sends the condensed rubric — about half the prompt tokens. Same grading standards, less worked explanation for the model to lean on. Good for cheap or small models; the full rubric gives strong models more to reason with.
+            </p>
           </div>
 
           {/* Customize Thinking Effort */}

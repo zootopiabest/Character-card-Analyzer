@@ -1,5 +1,5 @@
 import { AnalysisResult } from "../types";
-import { Heart, ShoppingCart, Music, Skull, Brain, Drama } from "lucide-react";
+import { Heart, ShoppingCart, Music, Skull, Brain, Drama, Coffee, Flame } from "lucide-react";
 
 // Renders whichever optional immersion modules are present on a result.
 // Every section is conditional, so a run with no modules renders nothing.
@@ -21,8 +21,10 @@ const REGISTER_STYLES: Array<{
 export default function ImmersionSections({ data }: { data: AnalysisResult }) {
   const hasSongs = !!(data.topSongs && data.topSongs.length > 0);
   const hasList = !!(data.shoppingList && data.shoppingList.items && data.shoppingList.items.length > 0);
+  const hasTuesday = !!(data.boringTuesday && (data.boringTuesday.inconvenience || data.boringTuesday.beat));
+  const hasPiss = !!(data.pissThemOff && (data.pissThemOff.trivial || data.pissThemOff.personal || data.pissThemOff.denied));
   const hasAny =
-    data.datingProfile || hasList || hasSongs || data.demise || data.psychoanalysis || data.emotionalRegisters;
+    data.datingProfile || hasList || hasSongs || data.demise || data.psychoanalysis || data.emotionalRegisters || hasTuesday || hasPiss;
   if (!hasAny) return null;
 
   return (
@@ -156,6 +158,55 @@ export default function ImmersionSections({ data }: { data: AnalysisResult }) {
           </div>
         </div>
       )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* THE BORING TUESDAY TEST */}
+        {hasTuesday && (
+          <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-2">
+            <span className="text-[10px] font-mono tracking-wider font-bold text-amber-300 uppercase flex items-center gap-1.5 pb-2 border-b border-[#1A1A1A]">
+              <Coffee size={12} className="text-amber-300" />
+              THE BORING TUESDAY TEST // LOW-STAKES BEAT
+            </span>
+            {data.boringTuesday!.inconvenience && (
+              <p className="text-[10px] font-mono text-zinc-500 leading-relaxed">
+                <span className="text-amber-300/80 font-bold uppercase">Inconvenience: </span>
+                {data.boringTuesday!.inconvenience}
+              </p>
+            )}
+            {data.boringTuesday!.beat && (
+              <p className="text-[11px] text-zinc-300 font-sans leading-relaxed bg-[#050505] p-3 rounded border border-[#1A1A1A] italic">
+                {data.boringTuesday!.beat}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* THREE WAYS TO PISS THEM OFF */}
+        {hasPiss && (
+          <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-2">
+            <span className="text-[10px] font-mono tracking-wider font-bold text-orange-500 uppercase flex items-center gap-1.5 pb-2 border-b border-[#1A1A1A]">
+              <Flame size={12} className="text-orange-500" />
+              THREE WAYS TO PISS THEM OFF // TRIGGER MAP
+            </span>
+            <div className="space-y-2">
+              {([
+                ["trivial", "Trivial irritation"],
+                ["personal", "Personal hurt"],
+                ["denied", "Claims it doesn't bother them"],
+              ] as const).map(([key, label]) => {
+                const value = data.pissThemOff![key];
+                if (!value) return null;
+                return (
+                  <div key={key} className="bg-[#050505] p-2.5 rounded border border-[#1A1A1A]">
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-orange-500/80 block mb-0.5">{label}</span>
+                    <p className="text-[11px] text-zinc-300 font-sans leading-relaxed">{value}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -24,6 +24,8 @@ export interface RunnerConfig {
   // cost zero output tokens.
   modules?: ImmersionModuleId[];
   maxOutputTokens?: number;
+  // "Token-Efficient Grading": send the condensed rubric instead of the full one.
+  efficientGrading?: boolean;
 }
 
 interface ProviderReply { text: string; model: string; }
@@ -36,7 +38,7 @@ interface ImagePart {
 // The system prompt is assembled per request so it only demands the immersion
 // modules the user actually enabled.
 function systemContent(endpoint: EndpointType, cfg: RunnerConfig): string {
-  return buildPrompt(endpoint, cfg.modules ?? []);
+  return buildPrompt(endpoint, cfg.modules ?? [], cfg.efficientGrading ?? false);
 }
 
 function providerLabel(provider: string): string {

@@ -4,10 +4,11 @@
 // the app to the chosen provider using the user's own API key (BYOK). The
 // prompt instructions are imported straight from systemInstructions.ts, so the
 // app needs no backend at all and can be packaged into a mobile app.
-import { buildPrompt } from "./systemInstructions";
+import { buildPrompt, buildVerifyPrompt } from "./systemInstructions";
 import type { ImmersionModuleId } from "./immersionModules";
 import { safeParseJSON } from "./utils";
 import { normalizeResult } from "./resultValidation";
+import { collectClaims, buildClaimsMessage, applyFixes, type VerificationSummary } from "./verifyPass";
 import { DEFAULT_GEMINI_MODEL, DEFAULT_OPENROUTER_MODEL, selectLatestModel } from "./data/models";
 
 export type EndpointType = "analyze" | "compare" | "group" | "multichar";
@@ -26,6 +27,10 @@ export interface RunnerConfig {
   maxOutputTokens?: number;
   // "Token-Efficient Grading": send the condensed rubric instead of the full one.
   efficientGrading?: boolean;
+  // "Evidence Verification": after the report comes back, fact-check its prose
+  // claims against the card in a second call and correct unsupported ones.
+  // Off means no second request is made at all.
+  verifyPass?: boolean;
 }
 
 interface ProviderReply { text: string; model: string; }
@@ -92,7 +97,7 @@ function chatCompletionsUrl(provider: string, customBaseUrl?: string | null): st
 // OpenAI-compatible providers: OpenRouter, OpenAI, and any custom endpoint that
 // speaks the /chat/completions format.
 async function callOpenAICompatible(
-  endpoint: EndpointType,
+  systemText: string,
   userText: string,
   images: ImagePart[],
   cfg: RunnerConfig
@@ -125,7 +130,7 @@ async function callOpenAICompatible(
     body: JSON.stringify({
       model: normalizeModel(cfg.model, cfg.provider),
       messages: [
-        { role: "system", content: systemContent(endpoint, cfg) },
+        { role: "system", content: systemText },
         { role: "user", content: userContent },
       ],
       ...(cfg.provider === "openai" && { response_format: { type: "json_object" } }),
@@ -171,7 +176,7 @@ async function callOpenAICompatible(
 
 // Google Gemini via its REST API (works directly from the browser with an API key).
 async function callGemini(
-  endpoint: EndpointType,
+  systemText: string,
   userText: string,
   images: ImagePart[],
   cfg: RunnerConfig
@@ -192,7 +197,7 @@ async function callGemini(
     // request logs or browser history.
     headers: { "Content-Type": "application/json", "x-goog-api-key": cfg.apiKey.trim() },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemContent(endpoint, cfg) }] },
+      systemInstruction: { parts: [{ text: systemText }] },
       contents: [{ role: "user", parts }],
       generationConfig: {
         maxOutputTokens: cfg.maxOutputTokens,
@@ -258,7 +263,10 @@ async function run(
   endpoint: EndpointType,
   userText: string,
   images: ImagePart[],
-  cfg: RunnerConfig
+  cfg: RunnerConfig,
+  // The card text alone, without the grading instruction wrapped around it.
+  // The verification pass re-reads this; it must not inherit pass 1's framing.
+  sourceText: string = userText
 ): Promise<any> {
   if (!cfg.apiKey || !cfg.apiKey.trim()) {
     throw new Error(
@@ -295,10 +303,12 @@ async function run(
     }
   }
   cfg = { ...cfg, model, maxOutputTokens };
-  const reply =
-    cfg.provider === "gemini"
-      ? await callGemini(endpoint, userText, images, cfg)
-      : await callOpenAICompatible(endpoint, userText, images, cfg);
+  const dispatch = (systemText: string, text: string, imgs: ImagePart[], c: RunnerConfig) =>
+    c.provider === "gemini"
+      ? callGemini(systemText, text, imgs, c)
+      : callOpenAICompatible(systemText, text, imgs, c);
+
+  const reply = await dispatch(systemContent(endpoint, cfg), userText, images, cfg);
   let parsed: any;
   try {
     parsed = safeParseJSON(reply.text);
@@ -307,7 +317,29 @@ async function run(
       "The AI returned malformed JSON. Retry, increase Report Output Limit, or disable optional modules. No grades were substituted."
     );
   }
-  return { ...normalizeResult(endpoint, parsed), requestModel: reply.model };
+  const result = { ...normalizeResult(endpoint, parsed), requestModel: reply.model };
+  if (!cfg.verifyPass) return result;
+
+  // Evidence Verification Pass. A finished report is already a valid result:
+  // a failure here (network, refusal, malformed patch) must never discard it,
+  // so everything below is best-effort and reports itself as unavailable
+  // instead of throwing.
+  const claims = collectClaims(endpoint, result);
+  if (!claims.length) return result;
+  let verification: VerificationSummary;
+  try {
+    const check = await dispatch(
+      buildVerifyPrompt(),
+      buildClaimsMessage(sourceText, claims),
+      [],
+      // Patches are tiny; never let the checker spend the report's budget.
+      { ...cfg, maxOutputTokens: Math.min(maxOutputTokens, 4096) }
+    );
+    verification = applyFixes(claims, safeParseJSON(check.text));
+  } catch {
+    verification = { checked: claims.length, corrected: 0, status: "unavailable", corrections: [] };
+  }
+  return { ...result, verification };
 }
 
 function analyzerNotesBlock(notes: string | null | undefined): string {
@@ -324,18 +356,20 @@ export function runAnalyze(
   },
   cfg: RunnerConfig
 ): Promise<any> {
-  const userText = `Analyze the following character card/description instructions intended for an LLM runtime.\n\nCHARACTER DESCRIPTION / INSTRUCTIONS:\n"""\n${p.description}\n"""${analyzerNotesBlock(p.analyzerNotes)}`;
+  const sourceText = `CHARACTER DESCRIPTION / INSTRUCTIONS:\n"""\n${p.description}\n"""${analyzerNotesBlock(p.analyzerNotes)}`;
+  const userText = `Analyze the following character card/description instructions intended for an LLM runtime.\n\n${sourceText}`;
   const images: ImagePart[] =
     p.imageBase64 && p.imageMimeType ? [{ mimeType: p.imageMimeType, base64: p.imageBase64 }] : [];
-  return run("analyze", userText, images, cfg);
+  return run("analyze", userText, images, cfg, sourceText);
 }
 
 export function runCompare(
   p: { originalDescription: string; remakeDescription: string },
   cfg: RunnerConfig
 ): Promise<any> {
-  const userText = `Compare original vs remake character designs.\n\nORIGINAL CHARACTER DESCRIPTION:\n"""\n${p.originalDescription}\n"""\n\nREMAKE CHARACTER DESCRIPTION:\n"""\n${p.remakeDescription}\n"""`;
-  return run("compare", userText, [], cfg);
+  const sourceText = `ORIGINAL CHARACTER DESCRIPTION:\n"""\n${p.originalDescription}\n"""\n\nREMAKE CHARACTER DESCRIPTION:\n"""\n${p.remakeDescription}\n"""`;
+  const userText = `Compare original vs remake character designs.\n\n${sourceText}`;
+  return run("compare", userText, [], cfg, sourceText);
 }
 
 export function runGroup(
@@ -352,6 +386,7 @@ export function runMultichar(
   p: { description: string; analyzerNotes?: string | null },
   cfg: RunnerConfig
 ): Promise<any> {
+  const sourceText = `MULTI-CHARACTER CARD DATA:\n\n${p.description}${analyzerNotesBlock(p.analyzerNotes)}`;
   const userText = `MULTI-CHARACTER CARD DATA TO ANALYZE:\n\n${p.description}${analyzerNotesBlock(p.analyzerNotes)}`;
-  return run("multichar", userText, [], cfg);
+  return run("multichar", userText, [], cfg, sourceText);
 }

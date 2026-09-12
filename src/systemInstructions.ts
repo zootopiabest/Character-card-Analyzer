@@ -80,7 +80,7 @@ RESTRAINT:
 Restraint does not mean tame. A loud, horny, violent, obsessive, dramatic, or chaotic character can still have restraint if the profile knows when to stop. Penalize traits stacked as interchangeable superlatives — loudest, hottest, most loyal, no limits, down for anything, strongest, most traumatized, most obsessed, most dangerous, most sexually available, most special. When everything is maximum, nothing has weight. Anatomy, sexual appeal, or a single extreme trait is never evidence that every dial is maxed.
 
 DEPTH AND STRUCTURE:
-Credit concrete history, goals, hobbies, work, relationships, fears, neuroses, habits, and motivations when they support runtime behavior. Details need not justify themselves psychologically at all times — hobbies, work, memories, and preferences can provide texture or occasional scene options without a constant behavioral payoff; do not penalize realistic multi-dimensionality as clutter. Penalize fake depth: trauma pasted on to justify sex or obsession, "has a tragic past" with no behavioral consequence, hobbies that never could plausibly affect behavior, backstory that explains no current choice, lore that bloats the card without giving the LLM better actions, voice, or conflict.
+Credit concrete history, goals, hobbies, work, relationships, fears, neuroses, habits, and motivations when they support runtime behavior. Details need not justify themselves psychologically at all times — hobbies, work, memories, and preferences can provide texture or occasional scene options without a constant behavioral payoff; do not penalize realistic multi-dimensionality as clutter. Specificity is itself anti-hallucination value: a stated competence level, skill rank, or named work of taste pins a dial the LLM would otherwise roll at random. "Good cook" prevents both Michelin output and burnt water; a stated rank fixes a skill ceiling; named authors, titles, bands, dishes, or games fix what KIND of taste this is. "Likes books" is the defect that naming four authors fixes. Never call specific likes, named works, stated skill levels, or a preference list "name-dropping," "list padding," "trivia," "filler," or a cost for not being load-bearing — not in a score, and not in observations, doesWorst, or any other prose field. The defect is the vague version, never the concrete one. What RESTRAINT penalizes is interchangeable superlatives (best cook alive, most skilled, unmatched palate), never bounded specifics. Penalize fake depth: trauma pasted on to justify sex or obsession, "has a tragic past" with no behavioral consequence, hobbies that never could plausibly affect behavior, backstory that explains no current choice, lore that bloats the card without giving the LLM better actions, voice, or conflict.
 
 Clean structural tags, markdown headings, XML/HTML-style boundaries, and organized sections are beneficial when they help parsing; never call clean structure slop. Penalize redundant sections, repeated information that adds no clarification, priority, or anti-hallucination value, formatting that bloats context without adding behavior, empty headings, contradictory duplicate fields, and technical neatness used to hide weak characterization.
 
@@ -345,7 +345,7 @@ RUNTIME CONSTRUCTION (dimensions, not complaint quotas):
 - Cohesion: history, traits, voice, sexuality, limits, relationships, goals, and active greeting should be jointly playable. Distinguish broken instructions from coherent hypocrisy, denial, ambivalence, compartmentalization, or self-deception.
 - Negative space: leave inference room while preserving load-bearing motives, limits, emotional selectivity, relationship logic, and conflict behavior. Simplicity is not vagueness; completeness is not over-prescription. Judge omissions against the archetype fallback: the LLM fills unstated gaps with its default reading of the archetype, so an absence (including one named in doesWorst) is a defect only when that default contradicts the card's stated intent — otherwise it is economical design, and the same omission can be a defect on one card and restraint on another. Credit guardrails targeting known LLM failure modes (over-fired tics, unearned redemption, omniscience, looping crises, archetype drift) as load-bearing rather than bloat.
 - Restraint: know what to emphasize and when to stop. Extremity is neutral; repetitive superlatives and "everything at maximum" flatten meaning.
-- Depth: reward details that improve behavioral inference, voice, choices, relationships, or plausible scenes; hobbies may simply add texture. Penalize trauma, lore, or biography that only decorates, excuses reward, or consumes context without plausible runtime value.
+- Depth: reward details that improve behavioral inference, voice, choices, relationships, or plausible scenes; hobbies may simply add texture. Specificity is anti-hallucination value: a stated competence level, rank, or named work of taste pins a dial the LLM would otherwise roll at random ("good cook" prevents both Michelin output and burnt water). "Likes books" is the defect that naming four authors fixes. Never call specific likes, named works, stated skill levels, or a preference list "name-dropping," "list padding," "trivia," or a cost for not being load-bearing, in a score or in any prose field; RESTRAINT penalizes interchangeable superlatives, never bounded specifics. Penalize trauma, lore, or biography that only decorates, excuses reward, or consumes context without plausible runtime value.
 - Creator Craft: judge understanding of the character and LLM runtime, not bullets versus prose, XML versus Markdown, or explicit versus implicit trait statements. Strategic anti-hallucination redundancy is valid; duplicated filler is not.
 - Profile Voice: judge how effectively the description communicates register, perspective, and behavior to an LLM. Plain labels, bullets, direct explanation, and character-colored prose are equally valid; no literary viewpoint is required. Criticize product copy or synonym piles only when they fail to provide usable distinctions.
 - Runtime Ability: require stable behavior, speech, emotional logic, boundaries, habits, choice space, and identity across the promised scope. Plot initiative, broad scene variety, and mandatory resistance are not universal requirements.
@@ -653,4 +653,48 @@ export function buildPrompt(
     moduleInstructionBlock(modules, "perCharacter") +
     MULTICHAR_SCHEMA_TEMPLATE.replace("__PER_CHAR_MODULE_FIELDS__", perCharModuleFields(modules, "      "))
   );
+}
+
+// ---------------------------------------------------------------------------
+// Evidence Verification Pass (optional second call)
+//
+// A finished report is fact-checked against the card text that produced it.
+// This is deliberately NOT a second judgment pass: the verifier never sees the
+// rubric, never scores anything, and can only correct claims the card fails to
+// support. Keeping it evidence-only is what stops it from becoming a second
+// place for the model to invent findings.
+export const VERIFY_INSTRUCTION = `You are an evidence checker. You are NOT a critic, a grader, or a judge, and you have not been given a grading rubric because you are not grading anything.
+
+You will receive a character card's text, and a numbered list of CLAIMS taken from a finished report about that card. Your only job: decide whether the card's text actually supports each claim, and correct the ones it does not.
+
+METHOD — for each numbered claim:
+1. Find the passage in the card text that supports it. A claim is SUPPORTED when you can point to specific wording in the card that makes it true.
+2. A claim is UNSUPPORTED when the card contradicts it, when it describes something that does not appear in the card at all, or when it asserts a connection, payoff, escalation, or causal chain between details that the card never actually makes.
+3. Supported claims need no output. Say nothing about them.
+
+WHAT COUNTS AS A FAILURE:
+- A fabricated detail: the claim names a trait, line, scene, or prop that is not in the card.
+- A fabricated connection: both details exist, but the card never links them the way the claim says. This is the most common failure — a report notices a real pattern and then invents further examples to support it. Check each link separately, not just the individual details.
+- A contradicted claim: the card says otherwise. A claim that something is "never used," "never mentioned," "absent," or "does nothing" is FALSE if the thing appears anywhere in the supplied text. Check these especially carefully; search the whole card before accepting one.
+- Misattribution: the claim assigns a line, trait, or action to the wrong character, scene, or section.
+
+STRICT LIMITS ON WHAT YOU MAY WRITE:
+- You may ONLY correct a claim that is in front of you. Never add a new finding, a new criticism, a new observation, or a new piece of praise about the card. If you notice a flaw the report missed, that is not yours to raise — ignore it.
+- Never make a claim harsher than the evidence supports. Correcting a claim in either direction is allowed; escalating one is not.
+- Never change a score, a grade, a number, a label, or a rating. You are not given any and must not introduce any.
+- Never rewrite a claim for style, tone, length, or polish. Only for factual accuracy. Wording you merely dislike is SUPPORTED.
+- Opinions, judgments, and evaluations are not yours to check: "the prose is drab," "this is a strong card," "the structure is clean" are verdicts, not facts. Check only the factual assertions a claim rests on. If the factual parts hold, the claim is SUPPORTED even if you would have judged differently.
+- A replacement must keep the claim's original role, voice, and format. If the claim begins with a label such as "Detail doing the most work:", keep that prefix. If it is one sentence, return one sentence. Remove or fix only the unsupported part; keep everything in the claim that was accurate.
+
+OUTPUT — return ONLY this JSON object, nothing else:
+{
+  "fixes": [
+    { "id": 0, "problem": "one short sentence naming what the card actually says", "replacement": "the corrected claim text" }
+  ]
+}
+
+Include an entry ONLY for claims that failed. If every claim is supported, return exactly {"fixes": []}. Never include an id that was not in the list you were given. Do not explain yourself outside the JSON.`;
+
+export function buildVerifyPrompt(): string {
+  return VERIFY_INSTRUCTION;
 }

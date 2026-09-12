@@ -1,3 +1,13 @@
+// Result of the optional Evidence Verification Pass (see src/verifyPass.ts).
+// Present only when the user enabled the toggle for the run; "unavailable"
+// means the check could not be completed and the report is pass-1 as written.
+export interface VerificationSummary {
+  checked: number;
+  corrected: number;
+  status: "clean" | "corrected" | "unavailable";
+  corrections: Array<{ label: string; problem: string }>;
+}
+
 export interface AnalysisResult {
   requestModel?: string;
   overallSlopScore: number; // 0 to 100
@@ -99,6 +109,7 @@ export interface AnalysisResult {
     matches: string[];
     gradeNotes: string;
   };
+  verification?: VerificationSummary | null;
 }
 
 export interface GroupResult {
@@ -137,6 +148,7 @@ export interface GroupResult {
   };
   
   criticalAssessment: string;
+  verification?: VerificationSummary | null;
 }
 
 export interface CharacterCardData {
@@ -190,6 +202,7 @@ export interface MultiCharResult {
     rpgEncounter: string;
     campFireChat: string;
   };
+  verification?: VerificationSummary | null;
 }
 
 export interface ComparisonResult {
@@ -206,5 +219,6 @@ export interface ComparisonResult {
       remakeScore: number;
     };
   };
+  verification?: VerificationSummary | null;
 }
 

@@ -259,3 +259,176 @@ test('Gemini 2.5 thinking budget leaves space for the report at a smaller output
   await runAnalyze(params,{...cfg,provider:'gemini',model:'gemini-2.5-pro',thinkingMode:true,reasoningEffort:'high',maxOutputTokens:8192});
   assert.ok(config.thinkingConfig.thinkingBudget < config.maxOutputTokens);
 });
+
+// --- Evidence Verification Pass (optional second call) ---------------------
+const verifiable = () => ({
+  ...good(),
+  doesBest: 'Holds a consistent obsessive register.',
+  doesWorst: 'The backpack is stated but never used anywhere.',
+  observations: [{ emoji: '🔍', text: 'Detail doing the most work: the bow ritual.' }],
+});
+// Replies in order: first the report, then the verification patch.
+const scripted = (...bodies) => {
+  const queue = [...bodies];
+  const calls = [];
+  globalThis.fetch = async (_url, options) => {
+    calls.push(JSON.parse(options.body));
+    return chat(queue.shift());
+  };
+  return calls;
+};
+
+test('verification is off by default and sends exactly one request', async () => {
+  const calls = scripted(JSON.stringify(verifiable()));
+  const result = await runAnalyze(params, cfg);
+  assert.equal(calls.length, 1);
+  assert.equal(result.verification, undefined);
+});
+
+test('verification sends a second rubric-free call and patches only the named claim', async () => {
+  const calls = scripted(
+    JSON.stringify(verifiable()),
+    JSON.stringify({ fixes: [{ id: 8, problem: 'The backpack appears in two greetings.', replacement: 'The backpack carries little weight outside its two greeting beats.' }] })
+  );
+  const result = await runAnalyze(params, { ...cfg, verifyPass: true });
+  assert.equal(calls.length, 2);
+
+  const verify = calls[1];
+  // The checker grades nothing, so it must not receive the rubric or a schema.
+  assert.doesNotMatch(verify.messages[0].content, /JSON SCHEMA|CALIBRATION BASELINE|SLOP DETECTION/);
+  assert.match(verify.messages[0].content, /evidence checker/i);
+  assert.match(verify.messages[1].content, /CLAIMS TO CHECK/);
+  assert.match(verify.messages[1].content, /Test character/);
+  // Claim 8 is doesWorst in collection order; the patch must land there only.
+  assert.match(verify.messages[1].content, /\[8\] \(doesWorst\)/);
+  assert.match(verify.messages[1].content, /\[7\] \(doesBest\)/);
+  // The checker re-reads the card, not pass 1's grading imperative.
+  assert.doesNotMatch(verify.messages[1].content, /Analyze the following character card/);
+  assert.equal(result.doesWorst, 'The backpack carries little weight outside its two greeting beats.');
+  assert.equal(result.doesBest, 'Holds a consistent obsessive register.');
+  assert.equal(result.observations[0].text, 'Detail doing the most work: the bow ritual.');
+  assert.equal(result.verification.status, 'corrected');
+  assert.equal(result.verification.corrected, 1);
+  assert.equal(result.verification.corrections[0].label, 'doesWorst');
+});
+
+test('a clean verification reports every claim supported and changes nothing', async () => {
+  scripted(JSON.stringify(verifiable()), JSON.stringify({ fixes: [] }));
+  const result = await runAnalyze(params, { ...cfg, verifyPass: true });
+  assert.equal(result.verification.status, 'clean');
+  assert.equal(result.verification.corrected, 0);
+  assert.ok(result.verification.checked > 5);
+  assert.equal(result.doesWorst, 'The backpack is stated but never used anywhere.');
+});
+
+test('malformed, unknown-id, runaway, and score-bearing patches are dropped, never applied', async () => {
+  const patches = [
+    { fixes: [{ id: 999, replacement: 'not a real claim' }] },      // id we never sent
+    { fixes: [{ id: 8, replacement: '' }] },                        // empty
+    { fixes: [{ id: 8, replacement: 42 }] },                        // not a string
+    { fixes: [{ id: 8, replacement: 'x'.repeat(5000) }] },          // runaway rewrite
+    { fixes: 'nope' },                                              // wrong shape
+    {},                                                             // no fixes at all
+  ];
+  for (const patch of patches) {
+    scripted(JSON.stringify(verifiable()), JSON.stringify(patch));
+    const result = await runAnalyze(params, { ...cfg, verifyPass: true });
+    assert.equal(result.doesWorst, 'The backpack is stated but never used anywhere.', JSON.stringify(patch));
+    assert.equal(result.verification.corrected, 0);
+    // The pass never touches a number.
+    assert.equal(result.overallSlopScore, 12);
+    assert.equal(result.coreAnalysis.originality.score, 8);
+  }
+});
+
+test('a failed verification keeps the report instead of discarding it', async () => {
+  for (const second of [() => { throw new Error('network down'); }, () => chat('not json at all'), () => ({ ok: false, status: 429, text: async () => 'rate limited' })]) {
+    let call = 0;
+    globalThis.fetch = async () => (++call === 1 ? chat(JSON.stringify(verifiable())) : second());
+    const result = await runAnalyze(params, { ...cfg, verifyPass: true });
+    assert.equal(result.verification.status, 'unavailable');
+    assert.equal(result.verification.corrected, 0);
+    assert.equal(result.overallSlopScore, 12);
+    assert.equal(result.doesWorst, 'The backpack is stated but never used anywhere.');
+  }
+});
+
+test('verification never spends the full report budget on a patch', async () => {
+  const calls = scripted(JSON.stringify(verifiable()), JSON.stringify({ fixes: [] }));
+  await runAnalyze(params, { ...cfg, verifyPass: true, maxOutputTokens: 32768 });
+  assert.equal(calls[0].max_tokens, 32768);
+  assert.ok(calls[1].max_tokens <= 4096, `verify budget ${calls[1].max_tokens}`);
+});
+
+test('both rubrics protect specific likes, named works, and stated skill levels', () => {
+  for (const endpoint of ['analyze', 'compare', 'group', 'multichar']) for (const efficient of [false, true]) {
+    const prompt = buildPrompt(endpoint, [], efficient);
+    for (const marker of [/anti-hallucination value/, /name-dropping/, /list padding/, /burnt water/, /bounded specifics/]) {
+      assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
+    }
+  }
+});
+
+// Patch whichever claim carries `label`, whatever index it lands on. The
+// lookup is plain string work and every assertion lives outside the mock:
+// a throw inside it would be swallowed by run()'s best-effort try/catch.
+async function patchClaim(report, label, replacement, invoke) {
+  let claims = '';
+  globalThis.fetch = async (_url, options) => {
+    const body = JSON.parse(options.body);
+    if (!/evidence checker/i.test(body.messages[0].content)) return chat(JSON.stringify(report));
+    claims = body.messages[1].content;
+    const line = claims.split('\n').find(l => l.includes(`(${label})`));
+    const id = line ? Number(line.slice(1, line.indexOf(']'))) : -1;
+    return chat(JSON.stringify({ fixes: [{ id, problem: 'Contradicted by the card.', replacement }] }));
+  };
+  return { out: await invoke(), claims };
+}
+
+test('verification reaches nested claims in every mode, and both cards in a comparison', async () => {
+  const side = label => ({ ...good(), doesWorst: `${label} never uses its stated props.` });
+  const comparison = { original: side('original'), remake: side('remake'), comparison: { overallVerdict: 'Better.', verdictScorecard: { originalScore: 7, remakeScore: 9 } } };
+  const group = { groupSlopScore: 5, criticalAssessment: 'Compatible.', synergyAnalysis: { overallCompatibility: 'They never interact.' }, characterBreakdowns: [{ name: 'Nala', archetype: 'Yandere', groupRole: 'Stalker', potentialConflicts: 'None stated.' }], groupScenarios: {} };
+  const multichar = { overallSlopScore: 5, criticalAssessment: 'Coherent world.', worldAndSystemAnalysis: { worldBuilding: { score: 8, notes: 'No rules given.' }, systemRulesAdherence: { score: 8 } }, characterAssessments: [{ name: 'Nala', depthScore: 7, criticalNotes: 'Flat.' }], playScenarios: {} };
+
+  // Comparison: only the named side is touched.
+  let { out, claims } = await patchClaim(comparison, 'remake.doesWorst', 'The remake uses both props.',
+    () => runCompare({ originalDescription: 'A', remakeDescription: 'B' }, { ...cfg, verifyPass: true }));
+  assert.ok(claims.includes('(remake.doesWorst)'), 'remake.doesWorst was never offered');
+  assert.ok(claims.includes('(original.doesWorst)'), 'original.doesWorst was never offered');
+  assert.equal(out.remake.doesWorst, 'The remake uses both props.');
+  assert.equal(out.original.doesWorst, 'original never uses its stated props.');
+  assert.equal(out.verification.corrected, 1);
+  assert.equal(out.verification.corrections[0].label, 'remake.doesWorst');
+  // Scores are pass 1's, always.
+  assert.equal(out.comparison.verdictScorecard.remakeScore, 9);
+
+  // Group: roster entries are addressed by character name.
+  ({ out, claims } = await patchClaim(group, 'Nala.potentialConflicts', 'She clashes with anyone near the user.',
+    () => runGroup({ characters: [{ name: 'Nala', description: 'A' }] }, { ...cfg, verifyPass: true })));
+  assert.ok(claims.includes('(Nala.potentialConflicts)'));
+  assert.equal(out.characterBreakdowns[0].potentialConflicts, 'She clashes with anyone near the user.');
+  assert.equal(out.groupSlopScore, 5);
+
+  // Multichar: per-character notes and nested world fields.
+  ({ out, claims } = await patchClaim(multichar, 'Nala.criticalNotes', 'Distinct, with a stated escalation ladder.',
+    () => runMultichar({ description: 'World' }, { ...cfg, verifyPass: true })));
+  assert.ok(claims.includes('(Nala.criticalNotes)'));
+  assert.ok(claims.includes('(worldBuilding)'));
+  assert.equal(out.characterAssessments[0].criticalNotes, 'Distinct, with a stated escalation ladder.');
+  assert.equal(out.worldAndSystemAnalysis.worldBuilding.notes, 'No rules given.');
+  assert.equal(out.characterAssessments[0].depthScore, 7);
+});
+
+test('immersion modules and flavor fields are never sent for fact-checking', async () => {
+  const withModules = { ...good(), doesBest: 'Consistent register.', datingProfile: 'Swipe right for surveillance.',
+    quippySellSummary: 'A cat who found her person.', slopSummary: 'Clean.', creatorNotesBlurb: 'Join the Discord.',
+    shoppingList: { items: ['dart gun (against type)'], notes: 'Tells you everything.' },
+    pissThemOff: { trivial: 'A crooked bow.', personal: 'Being ignored.', denied: 'Rejection.' } };
+  const { claims } = await patchClaim(withModules, 'doesBest', 'Consistent obsessive register.',
+    () => runAnalyze(params, { ...cfg, verifyPass: true }));
+  for (const excluded of ['Swipe right', 'dart gun', 'A crooked bow', 'found her person', 'Join the Discord']) {
+    assert.ok(!claims.includes(excluded), `${excluded} should not be fact-checked`);
+  }
+  assert.ok(claims.includes('(doesBest)'));
+});

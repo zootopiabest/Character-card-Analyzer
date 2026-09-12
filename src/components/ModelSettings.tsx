@@ -48,10 +48,13 @@ export function useModelSettings() {
   const [thinkingRaw, setThinkingRaw] = usePersisted("loresieve_thinking_mode", "false");
   const [reasoningEffort, setReasoningEffort] = usePersisted("loresieve_reasoning_effort", "medium");
   const [efficientRaw, setEfficientRaw] = usePersisted("loresieve_efficient_grading", "false");
+  const [verifyRaw, setVerifyRaw] = usePersisted("loresieve_verify_pass", "false");
 
   return {
     efficientGrading: efficientRaw === "true",
     setEfficientGrading: (v: boolean) => setEfficientRaw(v ? "true" : "false"),
+    verifyPass: verifyRaw === "true",
+    setVerifyPass: (v: boolean) => setVerifyRaw(v ? "true" : "false"),
     outputLimit: Number(outputLimit),
     setOutputLimit: (value: number) => setOutputLimit(String(value)),
     provider,
@@ -419,6 +422,28 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
             </div>
             <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">
               Sends the condensed rubric — about half the prompt tokens. Same grading standards, less worked explanation for the model to lean on. Good for cheap or small models; the full rubric gives strong models more to reason with.
+            </p>
+          </div>
+
+          {/* Evidence Verification Pass */}
+          <div className="space-y-2 pt-3 border-t border-[#1A1A1A]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[#4ADE80] rounded-full inline-block"></span>
+                Evidence Verification
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={s.verifyPass}
+                  onChange={(e) => s.setVerifyPass(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-[#1A1A1A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-600 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#4ADE80]/30 peer-checked:after:bg-[#4ADE80] peer-checked:after:border-transparent"></div>
+              </label>
+            </div>
+            <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">
+              Sends a second, smaller request that re-reads the card and checks the report's written claims against it, correcting anything the card does not actually say. Catches invented details and made-up connections. Costs one extra call on your key and does not change any score. Off by default.
             </p>
           </div>
 

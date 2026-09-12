@@ -16,7 +16,8 @@ interface GroupInputProps {
     reasoningEffort?: string,
     modules?: ImmersionModuleId[],
     maxOutputTokens?: number,
-    efficientGrading?: boolean
+    efficientGrading?: boolean,
+    verifyPass?: boolean
   ) => void;
   isLoading: boolean;
 }
@@ -108,7 +109,8 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
       settings.reasoningEffort,
       immersion.enabled,
       settings.outputLimit,
-      settings.efficientGrading
+      settings.efficientGrading,
+      settings.verifyPass
     );
   };
 

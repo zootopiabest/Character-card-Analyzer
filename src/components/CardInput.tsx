@@ -20,7 +20,8 @@ interface CardInputProps {
     reasoningEffort?: string,
     modules?: ImmersionModuleId[],
     maxOutputTokens?: number,
-    efficientGrading?: boolean
+    efficientGrading?: boolean,
+    verifyPass?: boolean
   ) => void;
   isLoading: boolean;
   onNameExtracted?: (name: string | null) => void;
@@ -143,7 +144,8 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
       settings.reasoningEffort,
       immersion.enabled,
       settings.outputLimit,
-      settings.efficientGrading
+      settings.efficientGrading,
+      settings.verifyPass
     );
   };
 

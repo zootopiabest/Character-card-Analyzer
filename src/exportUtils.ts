@@ -1,4 +1,4 @@
-import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "./types";
+import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult, VerificationSummary } from "./types";
 
 // The AI occasionally omits a field; guard every nested access so a slightly
 // off response can never break the export buttons.
@@ -29,10 +29,22 @@ function characterModuleLines(c: {
   return md;
 }
 
+// Evidence Verification Pass result, when the run used it. Keeps the exported
+// report honest about which claims were checked and which the card contradicted.
+function verificationLine(data: { verification?: VerificationSummary | null }): string {
+  const v = data.verification;
+  if (!v || typeof v.checked !== "number") return "";
+  if (v.status === "unavailable") return `Verification: unavailable — report as first written\n\n`;
+  let md = `Verification: ${v.checked} claim${v.checked === 1 ? "" : "s"} checked, ${v.corrected} corrected\n`;
+  for (const c of v.corrections ?? []) md += `- Corrected **${c.label}**${c.problem ? `: ${c.problem}` : ""}\n`;
+  return md + `\n`;
+}
+
 export function generateAuditMarkdown(data: AnalysisResult, characterName: string = "Character"): string {
   let md = `# Audit Report: ${characterName}\n\n`;
 
   if (data.requestModel) md += `Model: ${data.requestModel}\n\n`;
+  md += verificationLine(data);
   md += `## Scores\n`;
   md += `- **Slop Score**: ${data.overallSlopScore}/100 (${data.slopLabel})\n`;
   md += `- **Verdict**: ${data.slopSummary}\n\n`;
@@ -140,6 +152,7 @@ export function generateComparisonMarkdown(data: ComparisonResult): string {
   let md = `# Comparison Report\n\n`;
 
   if (data.requestModel) md += `Model: ${data.requestModel}\n\n`;
+  md += verificationLine(data);
   md += `## Overall Verdict\n`;
   md += `${data.comparison.overallVerdict}\n\n`;
   md += `### Scorecard\n`;
@@ -170,6 +183,7 @@ export function generateGroupMarkdown(data: GroupResult): string {
   let md = `# Group Synergy Report\n\n`;
 
   if (data.requestModel) md += `Model: ${data.requestModel}\n\n`;
+  md += verificationLine(data);
   md += `## Overall Group Slop\n`;
   md += `- **Score**: ${data.groupSlopScore}/100 (${data.slopLabel})\n`;
   md += `- **Verdict**: ${data.slopSummary}\n\n`;
@@ -208,6 +222,7 @@ export function generateMultiCharMarkdown(data: MultiCharResult, characterName: 
   let md = `# Multi-Char / RPG Report: ${characterName}\n\n`;
 
   if (data.requestModel) md += `Model: ${data.requestModel}\n\n`;
+  md += verificationLine(data);
   md += `## Overall Group Slop\n`;
   md += `- **Score**: ${data.overallSlopScore}/100 (${data.slopLabel})\n`;
   md += `- **Verdict**: ${data.slopSummary}\n\n`;

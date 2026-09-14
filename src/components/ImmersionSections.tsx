@@ -1,5 +1,5 @@
 import { AnalysisResult } from "../types";
-import { Heart, ShoppingCart, Music, Skull, Brain, Drama, Coffee, Flame } from "lucide-react";
+import { Heart, ShoppingCart, Music, Skull, Brain, Drama, Coffee, Flame, MessageSquareQuote } from "lucide-react";
 
 // Renders whichever optional immersion modules are present on a result.
 // Every section is conditional, so a run with no modules renders nothing.
@@ -18,13 +18,23 @@ const REGISTER_STYLES: Array<{
   { key: "comedy", label: "COMEDY", dot: "bg-emerald-400 shadow-[0_0_6px_#34D399]", text: "text-emerald-400" },
 ];
 
+// Per-greeting grades run 0-10 with HIGHER being better — the opposite of the
+// 0-100 slop hero, so they get their own ramp rather than getSlopScoreMeta().
+function greetingScoreStyle(score: number): { text: string; badge: string } {
+  if (score >= 8) return { text: "text-emerald-400", badge: "bg-emerald-950/50 text-emerald-400 border border-emerald-500/20" };
+  if (score >= 6) return { text: "text-[#00F0FF]", badge: "bg-cyan-950/50 text-[#00F0FF] border border-[#00F0FF]/20" };
+  if (score >= 4) return { text: "text-[#FACC15]", badge: "bg-yellow-950/50 text-[#FACC15] border border-[#FACC15]/20" };
+  return { text: "text-rose-500", badge: "bg-rose-950/50 text-rose-400 border border-rose-500/20" };
+}
+
 export default function ImmersionSections({ data }: { data: AnalysisResult }) {
   const hasSongs = !!(data.topSongs && data.topSongs.length > 0);
   const hasList = !!(data.shoppingList && data.shoppingList.items && data.shoppingList.items.length > 0);
   const hasTuesday = !!(data.boringTuesday && (data.boringTuesday.inconvenience || data.boringTuesday.beat));
   const hasPiss = !!(data.pissThemOff && (data.pissThemOff.trivial || data.pissThemOff.personal || data.pissThemOff.denied));
+  const hasGreetings = !!(data.greetingBreakdown && data.greetingBreakdown.length > 0);
   const hasAny =
-    data.datingProfile || hasList || hasSongs || data.demise || data.psychoanalysis || data.emotionalRegisters || hasTuesday || hasPiss;
+    data.datingProfile || hasList || hasSongs || data.demise || data.psychoanalysis || data.emotionalRegisters || hasTuesday || hasPiss || hasGreetings;
   if (!hasAny) return null;
 
   return (
@@ -207,6 +217,44 @@ export default function ImmersionSections({ data }: { data: AnalysisResult }) {
           </div>
         )}
       </div>
+      {/* PER-GREETING REPORT CARD */}
+      {hasGreetings && (
+        <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-3">
+          <span className="text-[10px] font-mono tracking-wider font-bold text-fuchsia-400 uppercase flex items-center gap-1.5 pb-2 border-b border-[#1A1A1A]">
+            <MessageSquareQuote size={12} className="text-fuchsia-400" />
+            PER-GREETING REPORT CARD // EACH ENTRY POINT GRADED ALONE
+          </span>
+          <div className="space-y-2">
+            {data.greetingBreakdown!.map((greeting, i) => {
+              const style = greetingScoreStyle(greeting.score);
+              return (
+                <div key={i} className="bg-[#050505] p-3 rounded border border-[#1A1A1A] space-y-1.5">
+                  <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-300">
+                      {greeting.label || `Greeting #${i + 1}`}
+                    </span>
+                    <span className="flex items-baseline gap-1.5 shrink-0">
+                      <span className={`text-lg font-black font-sans leading-none ${style.text}`}>{greeting.score}</span>
+                      <span className="text-[9px] font-mono text-zinc-600">/10</span>
+                    </span>
+                  </div>
+                  {greeting.register && (
+                    <span className={`text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded inline-block ${style.badge}`}>
+                      {greeting.register}
+                    </span>
+                  )}
+                  {greeting.notes && (
+                    <p className="text-[11px] text-zinc-300 font-sans leading-relaxed">{greeting.notes}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[9px] text-[#555] font-mono leading-relaxed">
+            Each greeting is judged in isolation, as if it were the only one the card had. These grades are module-local and never affect the card&rsquo;s scores.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

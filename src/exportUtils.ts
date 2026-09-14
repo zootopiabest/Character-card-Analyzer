@@ -16,6 +16,7 @@ function characterModuleLines(c: {
   emotionalRegisters?: string | null;
   boringTuesday?: string | null;
   pissThemOff?: string | null;
+  greetingBreakdown?: string | null;
 }): string {
   let md = "";
   if (c.datingProfile) md += `- **Dating Profile**: ${c.datingProfile}\n`;
@@ -26,6 +27,7 @@ function characterModuleLines(c: {
   if (c.emotionalRegisters) md += `- **Emotional Registers**: ${c.emotionalRegisters}\n`;
   if (c.boringTuesday) md += `- **Boring Tuesday Test**: ${c.boringTuesday}\n`;
   if (c.pissThemOff) md += `- **Three Ways to Piss Them Off**: ${c.pissThemOff}\n`;
+  if (c.greetingBreakdown) md += `- **Per-Greeting Report Card**: ${c.greetingBreakdown}\n`;
   return md;
 }
 
@@ -122,6 +124,15 @@ export function generateAuditMarkdown(data: AnalysisResult, characterName: strin
     if (data.pissThemOff.trivial) modulesMd += `  - Trivial irritation: ${data.pissThemOff.trivial}\n`;
     if (data.pissThemOff.personal) modulesMd += `  - Personal hurt: ${data.pissThemOff.personal}\n`;
     if (data.pissThemOff.denied) modulesMd += `  - Claims it doesn't bother them: ${data.pissThemOff.denied}\n`;
+  }
+  if (data.greetingBreakdown && data.greetingBreakdown.length) {
+    modulesMd += `- **Per-Greeting Report Card** (each greeting judged in isolation; module-local scores):\n`;
+    data.greetingBreakdown.forEach((greeting, i) => {
+      modulesMd += `  - **${greeting.label || `Greeting #${i + 1}`}** — ${greeting.score}/10`;
+      if (greeting.register) modulesMd += ` · *${greeting.register}*`;
+      modulesMd += `\n`;
+      if (greeting.notes) modulesMd += `    - ${greeting.notes}\n`;
+    });
   }
   if (modulesMd) {
     md += `## Immersion Modules\n${modulesMd}\n`;

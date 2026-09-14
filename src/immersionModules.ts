@@ -15,12 +15,17 @@ export type ImmersionModuleId =
   | "psychoanalysis"
   | "emotionalRegisters"
   | "boringTuesday"
-  | "pissThemOff";
+  | "pissThemOff"
+  | "greetingBreakdown";
 
 export interface ImmersionModuleMeta {
   id: ImmersionModuleId;
   label: string;
   blurb: string;
+  // Shown in the picker for modules whose output scales with the card rather
+  // than being a fixed-size section (greetingBreakdown emits one entry per
+  // greeting, so a card with a dozen alternates is a dozen times the cost).
+  warning?: string;
 }
 
 export const IMMERSION_MODULES: ImmersionModuleMeta[] = [
@@ -63,6 +68,12 @@ export const IMMERSION_MODULES: ImmersionModuleMeta[] = [
     id: "pissThemOff",
     label: "Three Ways to Piss Them Off",
     blurb: "A trivial irritation, a personal hurt, and something they claim doesn't bother them.",
+  },
+  {
+    id: "greetingBreakdown",
+    label: "Per-Greeting Report Card",
+    blurb: "Every greeting graded on its own — first message and each alternate, judged as if it were the only one.",
+    warning: "Costs one graded entry per greeting. A card with a dozen alternate greetings makes this the most expensive module by far.",
   },
 ];
 

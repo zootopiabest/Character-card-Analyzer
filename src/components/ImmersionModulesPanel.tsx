@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import {
   AppModeId,
   ImmersionModuleId,
@@ -93,6 +94,12 @@ export default function ImmersionModulesPanel({ m }: { m: ImmersionModulesState 
                   <span className="text-[9px] font-mono text-zinc-500 leading-relaxed">
                     {mod.blurb}
                   </span>
+                  {mod.warning && (
+                    <span className="text-[9px] font-mono text-[#FACC15] leading-relaxed flex items-start gap-1 mt-0.5">
+                      <AlertTriangle size={10} className="shrink-0 mt-px" />
+                      <span>{mod.warning}</span>
+                    </span>
+                  )}
                 </span>
               </label>
             );

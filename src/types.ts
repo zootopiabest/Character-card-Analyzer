@@ -92,6 +92,14 @@ export interface AnalysisResult {
     personal: string;
     denied: string;
   } | null;
+  // One entry per supplied greeting, each graded in isolation. Module-local
+  // scores (0-10, higher is better) — they never feed the card's grades.
+  greetingBreakdown?: Array<{
+    label: string;
+    score: number;
+    register: string;
+    notes: string;
+  }> | null;
 
   // New features
   firstMessageSynergy: string;
@@ -140,6 +148,7 @@ export interface GroupResult {
     emotionalRegisters?: string | null;
     boringTuesday?: string | null;
     pissThemOff?: string | null;
+    greetingBreakdown?: string | null;
   }>;
   
   groupScenarios: {
@@ -193,6 +202,7 @@ export interface MultiCharResult {
     emotionalRegisters?: string | null;
     boringTuesday?: string | null;
     pissThemOff?: string | null;
+    greetingBreakdown?: string | null;
   }>;
 
   groupCohesion: string;

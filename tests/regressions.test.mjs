@@ -64,6 +64,29 @@ test('Boring Tuesday and Piss Them Off module shapes validate', () => {
   for (const bad of [{...good(), boringTuesday:'nope'}, {...good(), pissThemOff:{trivial:1}}]) assert.throws(() => normalizeResult('analyze', bad), /invalid report/);
   assert.equal(normalizeResult('group', {groupSlopScore:5,criticalAssessment:'Fine.',synergyAnalysis:{},characterBreakdowns:[{name:'A',boringTuesday:'Shrugs.',pissThemOff:'Nothing.'}],groupScenarios:{}}).characterBreakdowns[0].pissThemOff, 'Nothing.');
 });
+test('per-greeting report card grades each greeting alone and never feeds the card score', () => {
+  // The rubric forbids ranking, counting, or averaging greetings against each
+  // other, so a module that grades them one by one must restate that rule and
+  // must keep its own scores out of every graded field.
+  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+    const off = buildPrompt(endpoint, [], efficient);
+    assert.doesNotMatch(off, /greetingBreakdown/, `${endpoint} efficient=${efficient} charges for an unselected module`);
+    const on = buildPrompt(endpoint, ['greetingBreakdown'], efficient);
+    for (const marker of [/greetingBreakdown/, /as if it were the only greeting/, /module-local/, /firstMessageSynergy remains/]) {
+      assert.match(on, marker, `${endpoint} efficient=${efficient}`);
+    }
+  }
+  const result = normalizeResult('analyze', {...good(), greetingBreakdown:[
+    {label:'First Message', score:7, register:'Wry, low-key', notes:'Establishes the routine without scripting the user.'},
+    {label:'Greeting #1', score:3, register:'Drab', notes:'Sustained flat prose and a contradicted boundary.'}]});
+  assert.equal(result.greetingBreakdown[1].score, 3);
+  assert.deepEqual(normalizeResult('analyze', good()).greetingBreakdown, []);
+  for (const bad of [{...good(), greetingBreakdown:'nope'}, {...good(), greetingBreakdown:[{label:'First Message'}]},
+                     {...good(), greetingBreakdown:[{label:'First Message', score:11, register:'a', notes:'b'}]}]) {
+    assert.throws(() => normalizeResult('analyze', bad), /invalid report/);
+  }
+  assert.equal(normalizeResult('multichar', {overallSlopScore:5,criticalAssessment:'Fine.',worldAndSystemAnalysis:{worldBuilding:{score:5},systemRulesAdherence:{score:5}},characterAssessments:[{name:'A',depthScore:6,greetingBreakdown:'First Message 6/10 — carries her cadence.'}],playScenarios:{}}).characterAssessments[0].greetingBreakdown, 'First Message 6/10 — carries her cadence.');
+});
 test('custom endpoints fail closed and normalize trailing slashes', async () => {
   const calls=[];
   globalThis.fetch=async (url,options)=>{calls.push({url,options});return chat(JSON.stringify(good()));};
@@ -424,10 +447,11 @@ test('immersion modules and flavor fields are never sent for fact-checking', asy
   const withModules = { ...good(), doesBest: 'Consistent register.', datingProfile: 'Swipe right for surveillance.',
     quippySellSummary: 'A cat who found her person.', slopSummary: 'Clean.', creatorNotesBlurb: 'Join the Discord.',
     shoppingList: { items: ['dart gun (against type)'], notes: 'Tells you everything.' },
-    pissThemOff: { trivial: 'A crooked bow.', personal: 'Being ignored.', denied: 'Rejection.' } };
+    pissThemOff: { trivial: 'A crooked bow.', personal: 'Being ignored.', denied: 'Rejection.' },
+    greetingBreakdown: [{ label: 'First Message', score: 6, register: 'Clipped', notes: 'Opens on the stakeout.' }] };
   const { claims } = await patchClaim(withModules, 'doesBest', 'Consistent obsessive register.',
     () => runAnalyze(params, { ...cfg, verifyPass: true }));
-  for (const excluded of ['Swipe right', 'dart gun', 'A crooked bow', 'found her person', 'Join the Discord']) {
+  for (const excluded of ['Swipe right', 'dart gun', 'A crooked bow', 'found her person', 'Join the Discord', 'Opens on the stakeout']) {
     assert.ok(!claims.includes(excluded), `${excluded} should not be fact-checked`);
   }
   assert.ok(claims.includes('(doesBest)'));

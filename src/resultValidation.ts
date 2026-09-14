@@ -28,7 +28,7 @@ function stat(d: any, field: string) {
   score(d.score, 10, field + ".score");
   strings(d, ["level", "notes"]);
 }
-const moduleStrings = ["datingProfile", "shoppingList", "topSongs", "demise", "psychoanalysis", "emotionalRegisters", "boringTuesday", "pissThemOff"];
+const moduleStrings = ["datingProfile", "shoppingList", "topSongs", "demise", "psychoanalysis", "emotionalRegisters", "boringTuesday", "pissThemOff", "greetingBreakdown"];
 function analysis(d: any) {
   report(d, "overallSlopScore");
   object(d.coreAnalysis, "coreAnalysis");
@@ -58,6 +58,11 @@ function analysis(d: any) {
   if (d.emotionalRegisters != null) strings(object(d.emotionalRegisters, "emotionalRegisters"), ["sad", "angry", "happy", "grief", "comedy"]);
   if (d.boringTuesday != null) strings(object(d.boringTuesday, "boringTuesday"), ["inconvenience", "beat"]);
   if (d.pissThemOff != null) strings(object(d.pissThemOff, "pissThemOff"), ["trivial", "personal", "denied"]);
+  for (const greeting of list(d, "greetingBreakdown")) {
+    object(greeting, "greetingBreakdown");
+    score(greeting.score, 10, "greetingBreakdown.score");
+    strings(greeting, ["label", "register", "notes"]);
+  }
   return d;
 }
 export function normalizeResult(endpoint: "analyze" | "compare" | "group" | "multichar", d: any): any {

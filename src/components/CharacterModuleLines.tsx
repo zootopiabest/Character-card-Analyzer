@@ -11,6 +11,7 @@ export interface CharacterModuleFields {
   emotionalRegisters?: string | null;
   boringTuesday?: string | null;
   pissThemOff?: string | null;
+  greetingBreakdown?: string | null;
 }
 
 const LINES: Array<{ key: keyof CharacterModuleFields; label: string; color: string }> = [
@@ -22,6 +23,7 @@ const LINES: Array<{ key: keyof CharacterModuleFields; label: string; color: str
   { key: "emotionalRegisters", label: "Emotional Registers", color: "text-[#00F0FF]" },
   { key: "boringTuesday", label: "Boring Tuesday Test", color: "text-amber-300" },
   { key: "pissThemOff", label: "Three Ways to Piss Them Off", color: "text-orange-500" },
+  { key: "greetingBreakdown", label: "Per-Greeting Report Card", color: "text-fuchsia-400" },
 ];
 
 export default function CharacterModuleLines({ char }: { char: CharacterModuleFields }) {

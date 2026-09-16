@@ -64,6 +64,26 @@ test('Boring Tuesday and Piss Them Off module shapes validate', () => {
   for (const bad of [{...good(), boringTuesday:'nope'}, {...good(), pissThemOff:{trivial:1}}]) assert.throws(() => normalizeResult('analyze', bad), /invalid report/);
   assert.equal(normalizeResult('group', {groupSlopScore:5,criticalAssessment:'Fine.',synergyAnalysis:{},characterBreakdowns:[{name:'A',boringTuesday:'Shrugs.',pissThemOff:'Nothing.'}],groupScenarios:{}}).characterBreakdowns[0].pissThemOff, 'Nothing.');
 });
+test('doesWorst is a card-construction defect field, never a genre or scope mismatch', () => {
+  // The old wording invited "struggles in high-action genres" — always true,
+  // always available, and never a defect, since the rubric grades a card
+  // against its own contract. Both rubrics must demand a real construction
+  // fault and must no longer offer a scope boundary as the easy way out.
+  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+    const prompt = buildPrompt(endpoint, [], efficient);
+    const where = `${endpoint} efficient=${efficient}`;
+    for (const marker of [/doesWorst is a defect field about the CARD/, /genre, scope, or use-case mismatch/,
+                          /struggles in high-action/i, /most fragile point/]) {
+      assert.match(prompt, marker, where);
+    }
+    assert.doesNotMatch(prompt, /name an intentional scope boundary instead/, where);
+  }
+  // The schema itself must stop advertising the escape hatch, in both audits
+  // of a comparison as well as the single-card audit.
+  for (const endpoint of ['analyze','compare']) for (const efficient of [false, true]) {
+    assert.match(buildPrompt(endpoint, [], efficient), /"doesWorst": "string; the CARD's weakest construction/);
+  }
+});
 test('per-greeting report card grades each greeting alone and never feeds the card score', () => {
   // The rubric forbids ranking, counting, or averaging greetings against each
   // other, so a module that grades them one by one must restate that rule and

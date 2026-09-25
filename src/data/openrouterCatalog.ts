@@ -29,7 +29,8 @@ export function toBrowserModels(data: unknown): BrowserModel[] {
     return [{
       id: m.id,
       name: typeof m.name === "string" && m.name ? m.name : m.id,
-      author: m.id.split("/")[0],
+      // "~openai/gpt-sol-latest" aliases belong under the same provider chip.
+      author: m.id.replace(/^~/, "").split("/")[0],
       created: typeof m.created === "number" ? m.created : 0,
       contextLength: typeof m.context_length === "number" ? m.context_length : 0,
       inputPrice: perMillion(m.pricing?.prompt),

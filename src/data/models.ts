@@ -64,6 +64,10 @@ export function migrateModel(provider: string, model: string): string {
   // before the overhaul shipped).
   const corrected = model.toLowerCase().replace(/anthropic\/claude-(\d+(?:\.\d+)*?)-(opus|sonnet)$/, "anthropic/claude-$2-$1");
   if (OPENROUTER_MODELS.some(option => option.id === corrected)) return corrected;
+  // Every pre-overhaul list value was capitalized. An already-lowercase ID is
+  // a deliberate pick (the model browser offers the whole catalog, pinned
+  // versions included), so never rewrite it to a "latest" family alias.
+  if (model === model.toLowerCase()) return corrected;
   if (/^google\/gemini-.*flash/.test(corrected) || corrected.startsWith("google/gemma-")) return DEFAULT_OPENROUTER_MODEL;
   for (const [selector, pattern] of Object.entries(families)) if (pattern.test(corrected)) return selector;
   return corrected; // Preserve manually entered model IDs (lowercased for OpenRouter).

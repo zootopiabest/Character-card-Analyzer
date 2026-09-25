@@ -128,7 +128,7 @@ export default function OpenRouterModelBrowser({ model, setModel }: { model: str
           <button
             type="button"
             onClick={() => setDescending(!descending)}
-            aria-label={descending ? "Sort descending" : "Sort ascending"}
+            aria-label="Reverse sort order"
             className={`${chip(false)} mb-1`}
           >
             {descending ? "↓" : "↑"}

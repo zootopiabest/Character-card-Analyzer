@@ -482,16 +482,18 @@ test('OpenRouter model browser trims, filters, and sorts the public catalog', as
     {id:'fireworks/ember-1',name:'Fireworks: Ember-1',created:300,context_length:1048576,pricing:{prompt:'0.000003',completion:'0.000015'},architecture:{input_modalities:['text','image']}},
     {id:'z-ai/glm-5.3',name:'Z.ai: GLM 5.3',created:200,context_length:200000,pricing:{prompt:'0',completion:'0'}},
     {id:'z-ai/glm-4',name:'Z.ai: GLM 4',created:100,context_length:128000,pricing:{prompt:'-1',completion:'-1'}},
+    {id:'~z-ai/glm-latest',name:'Z.ai: GLM Latest',created:50},
     {id:'no-slash'}, null,
   ];
   const models = toBrowserModels(raw);
-  assert.equal(models.length, 3);
+  assert.equal(models.length, 4);
+  models.pop();
   assert.equal(models[0].inputPrice, 3);
   assert.equal(models[0].vision, true);
   assert.equal(formatPrice(models[0].outputPrice), '$15.00');
   assert.equal(formatPrice(models[1].inputPrice), 'Free');
   assert.equal(formatPrice(models[2].inputPrice), '—');
-  assert.deepEqual(catalogAuthors(models), ['fireworks','z-ai']);
+  assert.deepEqual(catalogAuthors(toBrowserModels(raw)), ['fireworks','z-ai']);
   const ids = opts => filterAndSortModels(models, {query:'',author:null,sort:'newest',descending:true,...opts}).map(m=>m.id);
   assert.deepEqual(ids({}), ['fireworks/ember-1','z-ai/glm-5.3','z-ai/glm-4']);
   assert.deepEqual(ids({descending:false}), ['z-ai/glm-4','z-ai/glm-5.3','fireworks/ember-1']);
@@ -500,6 +502,16 @@ test('OpenRouter model browser trims, filters, and sorts the public catalog', as
   assert.deepEqual(ids({query:'GLM 5'}), ['z-ai/glm-5.3']);
   let sentAuth = 'unset';
   globalThis.fetch = async (url, options) => { sentAuth = options?.headers; return {ok:true,json:async()=>({data:raw})}; };
-  assert.equal((await fetchOpenRouterCatalog()).length, 3);
+  assert.equal((await fetchOpenRouterCatalog()).length, 4);
   assert.equal(sentAuth, undefined, 'the public catalog request must not carry an API key');
+});
+test('a pinned OpenRouter pick from the model browser survives reload unchanged', () => {
+  // migrateModel runs on every load; it must only remap capitalized
+  // pre-overhaul values, never a lowercase catalog ID the user chose.
+  for (const id of ['google/gemini-2.5-flash','google/gemma-3-27b-it:free','google/gemini-3-pro-preview','anthropic/claude-opus-4.5','deepseek/deepseek-v4-pro','~openai/gpt-sol-latest']) {
+    assert.equal(migrateModel('openrouter', id), id);
+    const values = new Map([['loresieve_openrouter_model', id]]);
+    const storage = {getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
+    assert.equal(readProviderSettings(storage,'openrouter').model, id);
+  }
 });

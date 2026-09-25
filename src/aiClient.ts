@@ -10,6 +10,7 @@ import { safeParseJSON } from "./utils";
 import { normalizeResult } from "./resultValidation";
 import { collectClaims, buildClaimsMessage, applyFixes, type VerificationSummary } from "./verifyPass";
 import { DEFAULT_GEMINI_MODEL, DEFAULT_OPENROUTER_MODEL, selectLatestModel } from "./data/models";
+import { toBrowserModels, type BrowserModel } from "./data/openrouterCatalog";
 
 export type EndpointType = "analyze" | "compare" | "group" | "multichar";
 
@@ -257,6 +258,22 @@ export async function fetchDeepSeekModels(apiKey: string): Promise<string[]> {
     : [];
   if (!ids.length) throw new Error("DeepSeek returned no models. Type the model ID manually.");
   return ids;
+}
+
+// OpenRouter's model catalog is public (no key needed); it powers the model
+// browser in Model Settings. Results cache under loresieve_openrouter_catalog.
+export async function fetchOpenRouterCatalog(): Promise<BrowserModel[]> {
+  let res: Response;
+  try {
+    res = await fetch("https://openrouter.ai/api/v1/models", { signal: AbortSignal.timeout(15000) });
+  } catch {
+    throw new Error("Could not reach OpenRouter. Check your connection and retry.");
+  }
+  if (!res.ok) throw new Error(`OpenRouter error ${res.status}. Try again in a moment.`);
+  const json: any = await res.json().catch(() => null);
+  const models = toBrowserModels(json?.data);
+  if (!models.length) throw new Error("OpenRouter returned no models. Enter the model ID manually.");
+  return models;
 }
 
 async function run(

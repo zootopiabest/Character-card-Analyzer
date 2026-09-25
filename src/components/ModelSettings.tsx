@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { OPENROUTER_MODELS, DEFAULT_GEMINI_MODEL, DEFAULT_OPENROUTER_MODEL } from "../data/models";
+import { DEFAULT_GEMINI_MODEL, DEFAULT_OPENROUTER_MODEL } from "../data/models";
 import { PROVIDERS, readProviderSettings } from "../providerSettings";
 import { fetchDeepSeekModels } from "../aiClient";
+import OpenRouterModelBrowser from "./OpenRouterModelBrowser";
 
 function readCachedDeepSeekModels(): string[] {
   try {
@@ -76,7 +77,7 @@ export type ModelSettings = ReturnType<typeof useModelSettings>;
 
 export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
   const [open, setOpen] = useState(() => localStorage.getItem("loresieve_use_custom") !== "false");
-  const [isManualModel, setIsManualModel] = useState(() => s.provider === "openrouter" && !OPENROUTER_MODELS.some(m => m.id === s.model));
+  const [isManualModel, setIsManualModel] = useState(false);
   const [showKey, setShowKey] = useState(false);
   // DeepSeek's model list is fetched live from its API on request (no
   // hardcoded list to go stale) and cached so the dropdown survives reloads.
@@ -84,12 +85,12 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
   const [fetchingModels, setFetchingModels] = useState(false);
   const [fetchStatus, setFetchStatus] = useState("");
 
-  // In list mode the dropdown can only display a value it actually has an
-  // option for, so pull an unrecognized or empty model onto a real option
-  // instead of showing a control whose value doesn't match what gets sent.
+  // In list mode the DeepSeek dropdown can only display a value it has an
+  // option for, so pull an unrecognized model onto a real option. The
+  // OpenRouter browser shows any ID, so it only needs a non-empty one.
   useEffect(() => {
     if (isManualModel) return;
-    if (s.provider === "openrouter" && !OPENROUTER_MODELS.some(m => m.id === s.model)) {
+    if (s.provider === "openrouter" && !s.model.trim()) {
       s.setModel(DEFAULT_OPENROUTER_MODEL);
     } else if (s.provider === "deepseek" && deepseekModels.length > 0 && !deepseekModels.includes(s.model)) {
       s.setModel(deepseekModels.includes("deepseek-chat") ? "deepseek-chat" : deepseekModels[0]);
@@ -171,8 +172,7 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
                     // Only land in manual entry if the newly loaded model
                     // really is a hand-typed ID this provider can't list.
                     setIsManualModel(
-                      p.id === "openrouter" ? !OPENROUTER_MODELS.some(m => m.id === loaded.model)
-                      : p.id === "deepseek" ? deepseekModels.length > 0 && !deepseekModels.includes(loaded.model)
+                      p.id === "deepseek" ? deepseekModels.length > 0 && !deepseekModels.includes(loaded.model)
                       : false
                     );
                   }}
@@ -277,7 +277,7 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
             <div className="space-y-1.5 animate-fadeIn">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <label className="block text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase">
-                  Active LLM Model String
+                  Select a Model
                 </label>
                 <label className="flex items-center gap-1.5 text-[9px] font-mono text-zinc-400 cursor-pointer">
                   <input
@@ -299,23 +299,10 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
                   className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded p-2 text-xs font-mono text-[#00F0FF] placeholder-zinc-700 focus:outline-none focus:border-[#00F0FF]/60"
                 />
               ) : (
-                <div className="relative">
-                  <select
-                    value={OPENROUTER_MODELS.some(m => m.id === s.model) ? s.model : DEFAULT_OPENROUTER_MODEL}
-                    onChange={(e) => s.setModel(e.target.value)}
-                    className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded p-2 text-xs font-mono text-zinc-200 appearance-none focus:outline-none focus:border-[#00F0FF]/60 cursor-pointer"
-                  >
-                    {OPENROUTER_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>{m.label}</option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-zinc-500 font-mono text-xs">
-                    ▼
-                  </div>
-                </div>
+                <OpenRouterModelBrowser model={s.model} setModel={s.setModel} />
               )}
               <span className="text-[9px] leading-snug text-zinc-500 font-mono block">
-                Latest choices follow new releases automatically. DeepSeek Pro uses a live catalog lookup; the others use OpenRouter aliases. Pinned versions stay fixed.
+                The list is OpenRouter's live public catalog. Recommended "Latest" choices follow new releases automatically; everything else is pinned to that exact model.
               </span>
             </div>
           ) : s.provider === "deepseek" ? (

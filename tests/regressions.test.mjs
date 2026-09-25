@@ -6,8 +6,9 @@ import { selectLatestModel, OPENROUTER_MODELS, migrateModel, DEFAULT_OPENROUTER_
 import { readProviderSettings } from '../src/providerSettings.ts';
 import { normalizeResult } from '../src/resultValidation.ts';
 import { tryExtractCharaMetadata } from '../src/utils.ts';
-import { runAnalyze, runCompare, runGroup, runMultichar, fetchDeepSeekModels } from '../src/aiClient.ts';
+import { runAnalyze, runCompare, runGroup, runMultichar, fetchDeepSeekModels, fetchOpenRouterCatalog } from '../src/aiClient.ts';
 import { buildPrompt } from '../src/systemInstructions.ts';
+import { toBrowserModels, catalogAuthors, filterAndSortModels, formatPrice } from '../src/data/openrouterCatalog.ts';
 
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
@@ -475,4 +476,30 @@ test('immersion modules and flavor fields are never sent for fact-checking', asy
     assert.ok(!claims.includes(excluded), `${excluded} should not be fact-checked`);
   }
   assert.ok(claims.includes('(doesBest)'));
+});
+test('OpenRouter model browser trims, filters, and sorts the public catalog', async () => {
+  const raw = [
+    {id:'fireworks/ember-1',name:'Fireworks: Ember-1',created:300,context_length:1048576,pricing:{prompt:'0.000003',completion:'0.000015'},architecture:{input_modalities:['text','image']}},
+    {id:'z-ai/glm-5.3',name:'Z.ai: GLM 5.3',created:200,context_length:200000,pricing:{prompt:'0',completion:'0'}},
+    {id:'z-ai/glm-4',name:'Z.ai: GLM 4',created:100,context_length:128000,pricing:{prompt:'-1',completion:'-1'}},
+    {id:'no-slash'}, null,
+  ];
+  const models = toBrowserModels(raw);
+  assert.equal(models.length, 3);
+  assert.equal(models[0].inputPrice, 3);
+  assert.equal(models[0].vision, true);
+  assert.equal(formatPrice(models[0].outputPrice), '$15.00');
+  assert.equal(formatPrice(models[1].inputPrice), 'Free');
+  assert.equal(formatPrice(models[2].inputPrice), '—');
+  assert.deepEqual(catalogAuthors(models), ['fireworks','z-ai']);
+  const ids = opts => filterAndSortModels(models, {query:'',author:null,sort:'newest',descending:true,...opts}).map(m=>m.id);
+  assert.deepEqual(ids({}), ['fireworks/ember-1','z-ai/glm-5.3','z-ai/glm-4']);
+  assert.deepEqual(ids({descending:false}), ['z-ai/glm-4','z-ai/glm-5.3','fireworks/ember-1']);
+  assert.deepEqual(ids({sort:'name'}), ['fireworks/ember-1','z-ai/glm-4','z-ai/glm-5.3']);
+  assert.deepEqual(ids({sort:'context',author:'z-ai'}), ['z-ai/glm-5.3','z-ai/glm-4']);
+  assert.deepEqual(ids({query:'GLM 5'}), ['z-ai/glm-5.3']);
+  let sentAuth = 'unset';
+  globalThis.fetch = async (url, options) => { sentAuth = options?.headers; return {ok:true,json:async()=>({data:raw})}; };
+  assert.equal((await fetchOpenRouterCatalog()).length, 3);
+  assert.equal(sentAuth, undefined, 'the public catalog request must not carry an API key');
 });

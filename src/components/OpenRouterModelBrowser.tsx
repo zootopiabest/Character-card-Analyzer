@@ -5,6 +5,7 @@ import {
   catalogAuthors,
   filterAndSortModels,
   formatPrice,
+  isListedModel,
   type BrowserModel,
   type CatalogSort,
 } from "../data/openrouterCatalog";
@@ -19,7 +20,9 @@ const RECOMMENDED = "__recommended__";
 function readCache(): { fetchedAt: number; models: BrowserModel[] } | null {
   try {
     const raw = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    return raw && Array.isArray(raw.models) && typeof raw.fetchedAt === "number" ? raw : null;
+    if (!raw || !Array.isArray(raw.models) || typeof raw.fetchedAt !== "number") return null;
+    // A list cached by an older version may still hold batch variants.
+    return { fetchedAt: raw.fetchedAt, models: raw.models.filter((m: BrowserModel) => isListedModel(m?.id ?? "")) };
   } catch {
     return null;
   }
@@ -96,6 +99,7 @@ export default function OpenRouterModelBrowser({ model, setModel }: { model: str
 
       <input
         type="search"
+        enterKeyHint="search"
         value={query}
         onChange={e => setQuery(e.target.value)}
         placeholder="Search OpenRouter models..."

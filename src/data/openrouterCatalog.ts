@@ -22,10 +22,14 @@ function perMillion(raw: unknown): number | null {
   return Number.isFinite(n) && n >= 0 ? n * 1_000_000 : null;
 }
 
+// ":batch" variants are for OpenRouter's asynchronous batch jobs, not the
+// one-off requests this app sends, so the browser never lists them.
+export const isListedModel = (id: string) => !id.endsWith(":batch");
+
 export function toBrowserModels(data: unknown): BrowserModel[] {
   if (!Array.isArray(data)) return [];
   return data.flatMap((m: any) => {
-    if (!m || typeof m.id !== "string" || !m.id.includes("/")) return [];
+    if (!m || typeof m.id !== "string" || !m.id.includes("/") || !isListedModel(m.id)) return [];
     return [{
       id: m.id,
       name: typeof m.name === "string" && m.name ? m.name : m.id,

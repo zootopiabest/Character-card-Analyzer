@@ -483,10 +483,12 @@ test('OpenRouter model browser trims, filters, and sorts the public catalog', as
     {id:'z-ai/glm-5.3',name:'Z.ai: GLM 5.3',created:200,context_length:200000,pricing:{prompt:'0',completion:'0'}},
     {id:'z-ai/glm-4',name:'Z.ai: GLM 4',created:100,context_length:128000,pricing:{prompt:'-1',completion:'-1'}},
     {id:'~z-ai/glm-latest',name:'Z.ai: GLM Latest',created:50},
+    {id:'fireworks/ember-1:batch',name:'Fireworks: Ember-1 (batch)',created:301},
     {id:'no-slash'}, null,
   ];
   const models = toBrowserModels(raw);
   assert.equal(models.length, 4);
+  assert.ok(!models.some(m => m.id.endsWith(':batch')), 'batch-only variants are hidden');
   models.pop();
   assert.equal(models[0].inputPrice, 3);
   assert.equal(models[0].vision, true);
@@ -514,4 +516,11 @@ test('a pinned OpenRouter pick from the model browser survives reload unchanged'
     const storage = {getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
     assert.equal(readProviderSettings(storage,'openrouter').model, id);
   }
+});
+test('Enter in a Model Settings text box never submits the analysis form', async () => {
+  // The panel is inside each mode's <form>; a phone keyboard's Go/Search key
+  // used to start a run with the previously selected model.
+  const { readFileSync } = await import('node:fs');
+  const source = readFileSync(new URL('../src/components/ModelSettings.tsx', import.meta.url), 'utf8');
+  assert.match(source, /id="model-settings-panel"[\s\S]*?onKeyDown=\{[\s\S]*?e\.key === "Enter"[\s\S]*?preventDefault\(\)/);
 });

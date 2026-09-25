@@ -134,7 +134,19 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
     : "AIzaSy...";
 
   return (
-    <div id="model-settings-panel" className="border border-[#1A1A1A] bg-[#050505] rounded-lg p-4 space-y-4">
+    <div
+      id="model-settings-panel"
+      // This panel sits inside each mode's <form>, where Enter in a text box
+      // (a phone keyboard's Go/Search key) submits the form and starts an
+      // analysis with the old model. Enter here only closes the keyboard.
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.target instanceof HTMLInputElement) {
+          e.preventDefault();
+          e.target.blur();
+        }
+      }}
+      className="border border-[#1A1A1A] bg-[#050505] rounded-lg p-4 space-y-4"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col">
           <span className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase">

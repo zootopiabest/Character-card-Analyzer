@@ -48,6 +48,14 @@ test('token-efficient grading sends a much smaller prompt with the same schema, 
   await runAnalyze(params, {...cfg, efficientGrading: true});
   assert.ok(body.messages[0].content.length < fullLength * 0.7);
 });
+test('both rubrics never penalize a character for being powerful', () => {
+  // The user can strip any power with one reply, so "omnipotent in combat",
+  // "removes tension", or "no failure state" is never a valid deduction.
+  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+    const prompt = buildPrompt(endpoint, [], efficient);
+    for (const marker of [/Power is never a defect/, /struggles to generate friction/]) assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
+  }
+});
 test('both rubrics refuse credit for species-default ear/tail behavior', () => {
   // Every LLM plays ears/tails as mood displays unprompted, so a card that
   // states the obvious mapping must not be praised for it. Full and

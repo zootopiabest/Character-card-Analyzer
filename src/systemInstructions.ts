@@ -258,6 +258,9 @@ Compare them fairly to judge: What was improved? What was lost or regressed? Wha
 
 The "Original" and "Remake" labels are positional only. They do NOT imply which card is better, newer, or improved. Do not assume the remake is an upgrade.
 
+SHARED PREMISE IS THE POINT OF A REMAKE:
+A remake reusing the original's premise, backstory beats, setting, or concept is what a remake is — never a deduction, never a loss of originality, and never framed as copying, plagiarism, borrowed authorship, or failing to "own" the concept, in any field. The question is what each version does with that premise. Originality for each card is distinctiveness of its own execution (see coreAnalysis), so a remake that turns the same backstory into a different, more specific person is more original, not less; a remake that changes only formatting earns no originality gain, and summaryOfChanges should say so plainly. Creator notes admitting the remake is based on another card stay neutral metadata, never evidence against it.
+
 CRITICAL COMPARISON DIRECTIVE REGARDING EPHEMERAL DATA:
 If the original character relied on "Example Dialogue" or "Greetings" to convey major traits, running gags, lore, or key behaviors, and the remake DELETED those fields but successfully integrated the traits into the persistent profile (Description/Personality) —— THIS IS A MASSIVE IMPROVEMENT, NOT A REGRESSION.
 Ephemeral portals (like dialog/greetings) fall out of context quickly. Moving load-bearing characterization from these ephemeral fields into the permanent profile house is a major upgrade. Do NOT penalize the remake in 'whatRegressed' or 'regressions' for losing example dialogue or alternate greetings if that core personality was successfully baked into the persistent structure. However, greetings and examples are also allowed to carry voice demonstrations, temporary emotional states, and AU-specific material that never needed to move — do not automatically praise deletion, and do not call it a regression unless meaningful usable content was actually lost. Evaluate if the original personality *only* existed in example dialogue and greetings, and praise the remake if it now exists outside of that.
@@ -408,6 +411,8 @@ SINGLE-CARD COVERAGE (each item in its designated JSON field; invent no extra ke
   compare: `${EFFICIENT_PERSONA} You specialize in evaluating character rewrites.
 
 "Original" and "Remake" are positional labels, not an implied ranking. Audit each independently against the rubric, then compare. A weak card beside a worse card remains weak; the verdict scores must agree with the individual findings. Explain tradeoffs when the versions pursue different valid contracts.
+
+Shared premise is the point of a remake: reusing the original's premise, backstory beats, or concept is never a deduction, never lowers originality, and is never framed as copying or borrowed authorship. Judge what each version does with it — originality is distinctiveness of execution, so a different, more specific person built on the same backstory is more original; a formatting-only remake gains nothing. Creator notes admitting derivation stay neutral.
 
 Ephemeral-field migration: greetings and examples are temporary. When a remake removes them but moves their load-bearing characterization into the persistent profile, that is a major improvement, not a deletion penalty. Do not automatically praise removal — examples may still provide valuable cadence, range, or temporary state, and deleting those without replacement can regress voice demonstration.
 

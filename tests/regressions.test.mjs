@@ -65,6 +65,13 @@ test('both rubrics never require a stated thaw mechanism for guarded characters'
     assert.doesNotMatch(prompt, /falls back to endlessly escalating hostility/, `${endpoint} efficient=${efficient}`);
   }
 });
+test('comparison never penalizes a remake for reusing the original premise', () => {
+  for (const efficient of [false, true]) {
+    const prompt = buildPrompt('compare', [], efficient);
+    assert.match(prompt, /point of a remake/i, `efficient=${efficient}`);
+    assert.match(prompt, /never framed as copying/, `efficient=${efficient}`);
+  }
+});
 test('both rubrics refuse credit for species-default ear/tail behavior', () => {
   // Every LLM plays ears/tails as mood displays unprompted, so a card that
   // states the obvious mapping must not be praised for it. Full and

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Sparkles, Cpu, Compass, FileText, Users, Globe } from "lucide-react";
 import CardInput from "./components/CardInput";
-import ComparisonInput from "./components/ComparisonInput";
+import ComparisonInput, { type ComparisonKind } from "./components/ComparisonInput";
 import ComparisonView from "./components/ComparisonView";
 import GroupInput from "./components/GroupInput";
 import GroupView from "./components/GroupView";
@@ -12,8 +12,8 @@ import Observations from "./components/Observations";
 import VisualMatch from "./components/VisualMatch";
 import ExportButtons from "./components/ExportButtons";
 import ImmersionSections from "./components/ImmersionSections";
-import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "./types";
-import { runAnalyze, runCompare, runGroup, runMultichar } from "./aiClient";
+import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult, PremiseResult } from "./types";
+import { runAnalyze, runCompare, runPremise, runGroup, runMultichar } from "./aiClient";
 import { ImmersionModuleId } from "./immersionModules";
 import { getSlopScoreMeta } from "./scoreMeta";
 
@@ -22,7 +22,11 @@ export default function App() {
   const [appMode, setAppMode] = useState<"audit" | "comparison" | "group" | "multichar">("audit");
   const [extractedName, setExtractedName] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
-  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
+  // Tagged with the comparison type it came from, so the view and export
+  // always match the request that produced it.
+  const [comparisonResult, setComparisonResult] = useState<
+    { kind: "remake"; data: ComparisonResult } | { kind: "premise"; data: PremiseResult } | null
+  >(null);
   const [groupResult, setGroupResult] = useState<GroupResult | null>(null);
   const [multiCharResult, setMultiCharResult] = useState<MultiCharResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -111,18 +115,21 @@ export default function App() {
     modules: ImmersionModuleId[] = [],
     maxOutputTokens: number = 32768,
     efficientGrading: boolean = false,
-    verifyPass: boolean = false
+    verifyPass: boolean = false,
+    kind: ComparisonKind = "remake"
   ) => {
     setIsLoading(true);
     setError(null);
     setComparisonResult(null);
 
     try {
-      const result = await runCompare(
-        { originalDescription, remakeDescription },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass }
-      );
-      setComparisonResult(result);
+      const cfg = { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass };
+      // Exactly one request per run: the selected type decides which prompt is sent.
+      if (kind === "premise") {
+        setComparisonResult({ kind, data: await runPremise({ cardADescription: originalDescription, cardBDescription: remakeDescription }, cfg) });
+      } else {
+        setComparisonResult({ kind, data: await runCompare({ originalDescription, remakeDescription }, cfg) });
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to complete character comparison audit.");
@@ -697,9 +704,13 @@ export default function App() {
                       className="mt-6"
                     >
                       <div className="flex justify-end gap-2 mb-4">
-                        <ExportButtons data={comparisonResult} type="comparison" />
+                        <ExportButtons data={comparisonResult.data} type={comparisonResult.kind === "premise" ? "premise" : "comparison"} />
                       </div>
-                      <ComparisonView comparisonData={comparisonResult} />
+                      {comparisonResult.kind === "premise" ? (
+                        <ComparisonView kind="premise" comparisonData={comparisonResult.data} />
+                      ) : (
+                        <ComparisonView kind="remake" comparisonData={comparisonResult.data} />
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>

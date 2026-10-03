@@ -12,7 +12,7 @@ import { collectClaims, buildClaimsMessage, applyFixes, type VerificationSummary
 import { DEFAULT_GEMINI_MODEL, DEFAULT_OPENROUTER_MODEL, selectLatestModel } from "./data/models";
 import { toBrowserModels, type BrowserModel } from "./data/openrouterCatalog";
 
-export type EndpointType = "analyze" | "compare" | "group" | "multichar";
+export type EndpointType = "analyze" | "compare" | "premise" | "group" | "multichar";
 
 export interface RunnerConfig {
   provider: string; // "gemini" | "openrouter" | "openai" | "deepseek" | "custom"
@@ -387,6 +387,17 @@ export function runCompare(
   const sourceText = `ORIGINAL CHARACTER DESCRIPTION:\n"""\n${p.originalDescription}\n"""\n\nREMAKE CHARACTER DESCRIPTION:\n"""\n${p.remakeDescription}\n"""`;
   const userText = `Compare original vs remake character designs.\n\n${sourceText}`;
   return run("compare", userText, [], cfg, sourceText);
+}
+
+// Same Premise comparison: two independent cards that share a premise or
+// tropes. Neutral A/B labels so neither card is framed as the original.
+export function runPremise(
+  p: { cardADescription: string; cardBDescription: string },
+  cfg: RunnerConfig
+): Promise<any> {
+  const sourceText = `CARD A DESCRIPTION:\n"""\n${p.cardADescription}\n"""\n\nCARD B DESCRIPTION:\n"""\n${p.cardBDescription}\n"""`;
+  const userText = `Compare two independent character cards that share a premise or tropes, and judge which executes it better.\n\n${sourceText}`;
+  return run("premise", userText, [], cfg, sourceText);
 }
 
 export function runGroup(

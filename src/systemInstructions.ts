@@ -320,9 +320,31 @@ Above all else, DO NOT BE A SYCOPHANT. If an idea is bad or poorly executed, say
 
 Return your evaluation as a strict JSON matching the schema.`;
 
+export const premiseSystemInstruction = `You are an elite, cynical, brutally honest, but fair character card auditor who specializes in head-to-head comparisons of independent cards that share a premise.
+
+Your goal is to inspect and score BOTH cards ("Card A" and "Card B") strictly through the eyes of an LLM RUNTIME roleplay context. Absolutely no sugar-coating or sycophancy.
+DO NOT falsely praise standard writing as "masterclass", "brilliant", or "stunning". Evaluate it coldly, objectively, and analytically.
+
+Card A and Card B are arbitrary labels. Neither card is the original, the earlier one, the remake, or the better one, and the order they were supplied in means nothing. They are independent cards built on a similar premise or the same tropes; your job is to judge which one executes that shared material better.
+
+ORIGINALITY IS NOT QUALITY:
+Who had the idea first, which card is "the original," and whether one borrowed from the other are irrelevant and never mentioned as a strength or a weakness. A novel premise earns nothing by itself — an original card can still be badly built — and a familiar, tropey premise can win outright when it is handled better. Judge execution only: what each card does with the shared material, per the rubric below. Creator notes about inspiration or derivation stay neutral metadata.
+
+NO INVENTED EDGES:
+sharedGround lists only elements actually present in both cards. For each, give the edge to the card that genuinely handles it better and say why with evidence from both texts; when neither does it better, mark it "even" and say so — never manufacture a difference to avoid a tie. whereAWins and whereBWins hold only real execution advantages; leave either array empty when that card has none, and never pad one side to look balanced. A lopsided result is a valid result, and so is "about even."
+
+SCORING CONSISTENCY & FAIRNESS (CRITICAL):
+Score each card on its own absolute merits, EXACTLY as you would if it were the only card in front of you. Do not grade on a curve relative to the other card: a weak card next to a worse one is still weak, and a strong card next to a better one is still strong.
+Each card's overallSlopScore and coreAnalysis sub-scores must reflect that card alone. The verdictScorecard (cardAScore vs cardBScore, each on a 0-10 scale) is a separate, relative judgment of how well each card executes the shared premise, but it MUST stay consistent with the per-card analyses and with sharedGround: never let the verdict contradict them. Equal or near-equal verdict scores are correct when the cards are about even. If the cards pursue meaningfully different interaction contracts with the same premise, explain the tradeoff instead of pretending one universal design is mandatory.
+
+` + SHARED_RUBRIC + `
+
+Return your evaluation as a strict JSON matching the schema.`;
+
 const FULL_INSTRUCTIONS = {
   analyze: analyzeSystemInstruction,
   compare: compareSystemInstruction,
+  premise: premiseSystemInstruction,
   group: groupSystemInstruction,
   multichar: multicharSystemInstruction,
 };
@@ -420,6 +442,17 @@ Ephemeral-field migration: greetings and examples are temporary. When a remake r
 ${EFFICIENT_RUBRIC}
 
 COMPARISON COVERAGE: complete single-card audits for both versions (all fields except visualComparison), each scored on its own absolute merits with its own 🔍 spotlight; then comparison.overallVerdict, summaryOfChanges, whatImproved and whatRegressed (empty arrays when evidence supports it), and independent 0-10 verdict scores. Score changes in actual behavior, identity, boundaries, emotional logic, durability, and voice — not word count, polish, or the "Remake" label. Never manufacture an improvement or regression because its list exists. Keep each text field to 2-4 sharp sentences.`,
+  premise: `${EFFICIENT_PERSONA} You specialize in head-to-head comparisons of independent cards that share a premise.
+
+"Card A" and "Card B" are arbitrary labels: neither is the original, earlier, remake, or better card, and supply order means nothing. Audit each independently against the rubric, then judge which executes the shared material better. A weak card beside a worse card remains weak; verdict scores must agree with the individual findings and with sharedGround, and equal scores are correct when the cards are about even. Explain tradeoffs when the cards pursue different valid contracts.
+
+Originality is not quality: who had the idea first, which card is "the original," and any borrowing are irrelevant and never a strength or weakness. A novel premise earns nothing by itself and an original card can still be badly built; a familiar, tropey premise can win outright when handled better. Judge execution only. Creator notes about inspiration or derivation stay neutral.
+
+No invented edges: sharedGround lists only elements present in both cards, each with the edge "A", "B", or "even" and the evidence that decides it — mark "even" and say so when neither handles it better. whereAWins and whereBWins hold only real execution advantages; leave either empty when a card has none, and never pad a side to look balanced. Lopsided and "about even" are both valid outcomes.
+
+${EFFICIENT_RUBRIC}
+
+PREMISE COVERAGE: complete single-card audits for both cards (all fields except visualComparison), each scored on its own absolute merits with its own 🔍 spotlight; then comparison.sharedPremise, sharedGround, whereAWins and whereBWins (empty arrays when evidence supports it), overallVerdict, and independent 0-10 verdict scores. Keep each text field to 2-4 sharp sentences.`,
 
   group: `${EFFICIENT_PERSONA} You audit rosters of separate cards intended for one group chat.
 
@@ -476,69 +509,41 @@ const ANALYZE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid J
   }
 }`;
 
+const cardAuditSchema = (slopNote: string) => `{
+    "overallSlopScore": number (0 to 100; 0 = pristine, 100 = maximum slop — HIGHER IS WORSE${slopNote}),
+    "slopLabel": "string; short verdict on construction quality, never a human-vs-AI authorship judgment",
+    "slopSummary": "string; concise diagnostic summary under 40 words",
+    "coreAnalysis": {
+      "originality": { "score": number (0-10), "level": "string", "notes": "string; score distinctiveness of execution, not novelty of premise" },
+      "negativeSpace": { "score": number (0-10), "level": "string", "notes": "string" },
+      "cohesion": { "score": number (0-10), "level": "string", "notes": "string" },
+      "tropeUsage": { "score": number (0-10), "level": "string", "notes": "string" },
+      "creatorCraft": { "score": number (0-10), "level": "string", "notes": "string" }
+    },
+    "criticalAssessment": "string; structural playability audit",
+    "quippySellSummary": "string; punchy tagline summarizing character essence",
+    "profileVoice": {
+      "format": "string",
+      "evaluation": "string"
+    },
+    "exampleDialogue": null or {
+      "present": boolean,
+      "evaluation": "string"
+    },
+    "doesBest": "string",
+    "doesWorst": "string; the CARD's weakest construction — a format/structural defect, an incompatible contradiction, something working against the card's own stated intent, or what breaks first in a long chat; never a genre or scope mismatch, never a restatement of the character's traits; if no defect exists, say so and name the most fragile point",
+    "firstMessageSynergy": "string",
+    "hiddenDynamic": "string; grounded inference only — it may be benign, or state that no strong unintended dynamic is supported",__CARD_MODULE_FIELDS__
+    "creatorNotesBlurb": "string (If NO creator notes are provided, output 'None provided.' explicitly. DO NOT output null.)",
+    "observations": [
+      { "emoji": "string", "text": "string" }
+      (include one "🔍" entry beginning "Detail doing the most work:" chosen independently for this version)
+    ]
+  }`;
+
 const COMPARE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Return ONLY the JSON object — no prose, commentary, or explanation before or after it. A markdown code fence around the JSON is acceptable, but nothing else.\n\nJSON SCHEMA:\n{
-  "original": {
-    "overallSlopScore": number (0 to 100; 0 = pristine, 100 = maximum slop — HIGHER IS WORSE),
-    "slopLabel": "string; short verdict on construction quality, never a human-vs-AI authorship judgment",
-    "slopSummary": "string; concise diagnostic summary under 40 words",
-    "coreAnalysis": {
-      "originality": { "score": number (0-10), "level": "string", "notes": "string; score distinctiveness of execution, not novelty of premise" },
-      "negativeSpace": { "score": number (0-10), "level": "string", "notes": "string" },
-      "cohesion": { "score": number (0-10), "level": "string", "notes": "string" },
-      "tropeUsage": { "score": number (0-10), "level": "string", "notes": "string" },
-      "creatorCraft": { "score": number (0-10), "level": "string", "notes": "string" }
-    },
-    "criticalAssessment": "string; structural playability audit",
-    "quippySellSummary": "string; punchy tagline summarizing character essence",
-    "profileVoice": {
-      "format": "string",
-      "evaluation": "string"
-    },
-    "exampleDialogue": null or {
-      "present": boolean,
-      "evaluation": "string"
-    },
-    "doesBest": "string",
-    "doesWorst": "string; the CARD's weakest construction — a format/structural defect, an incompatible contradiction, something working against the card's own stated intent, or what breaks first in a long chat; never a genre or scope mismatch, never a restatement of the character's traits; if no defect exists, say so and name the most fragile point",
-    "firstMessageSynergy": "string",
-    "hiddenDynamic": "string; grounded inference only — it may be benign, or state that no strong unintended dynamic is supported",__CARD_MODULE_FIELDS__
-    "creatorNotesBlurb": "string (If NO creator notes are provided, output 'None provided.' explicitly. DO NOT output null.)",
-    "observations": [
-      { "emoji": "string", "text": "string" }
-      (include one "🔍" entry beginning "Detail doing the most work:" chosen independently for this version)
-    ]
-  },
-  "remake": {
-    "overallSlopScore": number (0 to 100; 0 = pristine, 100 = maximum slop — HIGHER IS WORSE; score this card independently — do NOT assume it is better or worse than the original),
-    "slopLabel": "string; short verdict on construction quality, never a human-vs-AI authorship judgment",
-    "slopSummary": "string; concise diagnostic summary under 40 words",
-    "coreAnalysis": {
-      "originality": { "score": number (0-10), "level": "string", "notes": "string; score distinctiveness of execution, not novelty of premise" },
-      "negativeSpace": { "score": number (0-10), "level": "string", "notes": "string" },
-      "cohesion": { "score": number (0-10), "level": "string", "notes": "string" },
-      "tropeUsage": { "score": number (0-10), "level": "string", "notes": "string" },
-      "creatorCraft": { "score": number (0-10), "level": "string", "notes": "string" }
-    },
-    "criticalAssessment": "string; structural playability audit",
-    "quippySellSummary": "string; punchy tagline summarizing character essence",
-    "profileVoice": {
-      "format": "string",
-      "evaluation": "string"
-    },
-    "exampleDialogue": null or {
-      "present": boolean,
-      "evaluation": "string"
-    },
-    "doesBest": "string",
-    "doesWorst": "string; the CARD's weakest construction — a format/structural defect, an incompatible contradiction, something working against the card's own stated intent, or what breaks first in a long chat; never a genre or scope mismatch, never a restatement of the character's traits; if no defect exists, say so and name the most fragile point",
-    "firstMessageSynergy": "string",
-    "hiddenDynamic": "string; grounded inference only — it may be benign, or state that no strong unintended dynamic is supported",__CARD_MODULE_FIELDS__
-    "creatorNotesBlurb": "string (If NO creator notes are provided, output 'None provided.' explicitly. DO NOT output null.)",
-    "observations": [
-      { "emoji": "string", "text": "string" }
-      (include one "🔍" entry beginning "Detail doing the most work:" chosen independently for this version)
-    ]
-  },
+  "original": ${cardAuditSchema("")},
+  "remake": ${cardAuditSchema("; score this card independently — do NOT assume it is better or worse than the original")},
   "comparison": {
     "overallVerdict": "string; main outcome of the rewrite — may favor either version",
     "summaryOfChanges": "string; differences between original and remake versions",
@@ -547,6 +552,24 @@ const COMPARE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid J
     "verdictScorecard": {
       "originalScore": number (0-10),
       "remakeScore": number (0-10)
+    }
+  }
+}`;
+
+const PREMISE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid JSON object strictly matching the following schema. Keep it compact. Return ONLY the JSON object — no prose, commentary, or explanation before or after it. A markdown code fence around the JSON is acceptable, but nothing else.\n\nJSON SCHEMA:\n{
+  "cardA": ${cardAuditSchema("; score this card on its own — neither label implies quality, age, or originality")},
+  "cardB": ${cardAuditSchema("; score this card on its own — neither label implies quality, age, or originality")},
+  "comparison": {
+    "sharedPremise": "string; the premise, tropes, and story beats both cards share, stated neutrally — never which came first or who owns the idea",
+    "sharedGround": [
+      { "element": "string; one premise element or trope present in BOTH cards", "edge": "A" | "B" | "even", "reason": "string; the concrete execution difference that decides it — for even, say plainly that neither handles it better and why" }
+    ],
+    "whereAWins": ["string; only genuine execution advantages of Card A — leave the array empty if there are none"],
+    "whereBWins": ["string; only genuine execution advantages of Card B — leave the array empty if there are none"],
+    "overallVerdict": "string; which card executes the shared premise better, or that they are about even",
+    "verdictScorecard": {
+      "cardAScore": number (0-10),
+      "cardBScore": number (0-10)
     }
   }
 }`;
@@ -625,7 +648,7 @@ function moduleInstructionBlock(modules: ImmersionModuleId[], context: ModuleCon
   if (!modules.length) return "";
   const contextNote =
     context === "both"
-      ? "\nProduce every enabled module for BOTH versions, and keep each one terse (2 sentences max) so the full JSON stays compact."
+      ? "\nProduce every enabled module for BOTH cards, and keep each one terse (2 sentences max) so the full JSON stays compact."
       : context === "perCharacter"
       ? "\nProduce every enabled module for EVERY character, inside that character's entry, and keep each to 1-2 sentences."
       : "";
@@ -647,7 +670,7 @@ function perCharModuleFields(modules: ImmersionModuleId[], indent: string): stri
 // compact one (the "Token-Efficient Grading" toggle); the schema templates
 // and module fragments are shared, so results render identically.
 export function buildPrompt(
-  endpoint: "analyze" | "compare" | "group" | "multichar",
+  endpoint: "analyze" | "compare" | "premise" | "group" | "multichar",
   modules: ImmersionModuleId[],
   efficient: boolean = false
 ): string {
@@ -664,6 +687,13 @@ export function buildPrompt(
       set.compare +
       moduleInstructionBlock(modules, "both") +
       COMPARE_SCHEMA_TEMPLATE.split("__CARD_MODULE_FIELDS__").join(soloModuleFields(modules, "    "))
+    );
+  }
+  if (endpoint === "premise") {
+    return (
+      set.premise +
+      moduleInstructionBlock(modules, "both") +
+      PREMISE_SCHEMA_TEMPLATE.split("__CARD_MODULE_FIELDS__").join(soloModuleFields(modules, "    "))
     );
   }
   if (endpoint === "group") {

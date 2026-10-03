@@ -65,7 +65,7 @@ function analysis(d: any) {
   }
   return d;
 }
-export function normalizeResult(endpoint: "analyze" | "compare" | "group" | "multichar", d: any): any {
+export function normalizeResult(endpoint: "analyze" | "compare" | "premise" | "group" | "multichar", d: any): any {
   object(d, "report");
   if (endpoint === "analyze") return analysis(d);
   if (endpoint === "compare") {
@@ -77,6 +77,20 @@ export function normalizeResult(endpoint: "analyze" | "compare" | "group" | "mul
     stringList(comparison, "whatRegressed");
     object(comparison.verdictScorecard, "verdictScorecard");
     for (const key of ["originalScore", "remakeScore"]) score(comparison.verdictScorecard[key], 10, key);
+  } else if (endpoint === "premise") {
+    analysis(d.cardA);
+    analysis(d.cardB);
+    const comparison = object(d.comparison, "comparison");
+    strings(comparison, ["overallVerdict", "sharedPremise"]);
+    for (const item of list(comparison, "sharedGround")) {
+      object(item, "sharedGround");
+      if (!["A", "B", "even"].includes(item.edge)) invalid("sharedGround.edge");
+      strings(item, ["element", "reason"]);
+    }
+    stringList(comparison, "whereAWins");
+    stringList(comparison, "whereBWins");
+    object(comparison.verdictScorecard, "verdictScorecard");
+    for (const key of ["cardAScore", "cardBScore"]) score(comparison.verdictScorecard[key], 10, key);
   } else if (endpoint === "group") {
     report(d, "groupSlopScore");
     const synergy = object(d.synergyAnalysis, "synergyAnalysis");

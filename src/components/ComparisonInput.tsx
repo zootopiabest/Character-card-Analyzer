@@ -22,12 +22,35 @@ interface ComparisonInputProps {
     modules?: ImmersionModuleId[],
     maxOutputTokens?: number,
     efficientGrading?: boolean,
-    verifyPass?: boolean
+    verifyPass?: boolean,
+    kind?: ComparisonKind
   ) => void;
   isLoading: boolean;
 }
 
+// "remake" = before/after of the same card; "premise" = two independent cards
+// sharing a premise or tropes. Each sends exactly one request with its own
+// prompt; the choice is remembered across sessions.
+export type ComparisonKind = "remake" | "premise";
+const KIND_KEY = "loresieve_comparison_kind";
+function loadKind(): ComparisonKind {
+  try {
+    return localStorage.getItem(KIND_KEY) === "premise" ? "premise" : "remake";
+  } catch {
+    return "remake";
+  }
+}
+
 export default function ComparisonInput({ onCompare, isLoading }: ComparisonInputProps) {
+  const [kind, setKindState] = useState<ComparisonKind>(loadKind);
+  const setKind = (next: ComparisonKind) => {
+    setKindState(next);
+    try { localStorage.setItem(KIND_KEY, next); } catch { /* per-viewer convenience only */ }
+  };
+  const isPremise = kind === "premise";
+  const leftLabel = isPremise ? "Card A" : "Original";
+  const rightLabel = isPremise ? "Card B" : "Remake";
+
   // Original states
   const [origDesc, setOrigDesc] = useState("");
   const [origImgPreview, setOrigImgPreview] = useState<string | null>(null);
@@ -77,7 +100,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
           setExtractedName(name || null);
         }
         if (source === "json" || source === "png-embedded") {
-          setExtractedName(name || (isOriginal ? "Original Character" : "Remade Character"));
+          setExtractedName(name || (isOriginal ? `${leftLabel} Character` : `${rightLabel} Character`));
         }
       },
       onImage: ({ dataUrl, base64, mimeType }) => {
@@ -122,7 +145,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!origDesc.trim() || !remakeDesc.trim()) {
-      alert("Please provide descriptions/cards for BOTH the original and the remake character.");
+      alert(`Please provide descriptions/cards for BOTH ${leftLabel} and ${rightLabel}.`);
       return;
     }
 
@@ -144,12 +167,42 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
       immersion.enabled,
       settings.outputLimit,
       settings.efficientGrading,
-      settings.verifyPass
+      settings.verifyPass,
+      kind
     );
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* COMPARISON TYPE: picks which single request is sent */}
+      <div className="space-y-2">
+        <span className="text-[10px] font-mono tracking-widest font-bold text-zinc-400 uppercase block">Comparison Type</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Comparison type">
+          {([
+            { id: "remake", title: "Remake (Before / After)", desc: "One card and its rewrite. What improved, what regressed." },
+            { id: "premise", title: "Same Premise (Head-to-Head)", desc: "Two separate cards sharing a premise or tropes. Who handles it better." },
+          ] as const).map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              role="radio"
+              aria-checked={kind === option.id}
+              onClick={() => setKind(option.id)}
+              className={`text-left p-3 rounded-lg border transition ${
+                kind === option.id
+                  ? "border-[#00F0FF] bg-cyan-950/20 text-white"
+                  : "border-[#222] bg-[#080808] text-zinc-500 hover:border-zinc-600"
+              }`}
+            >
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider block">
+                {kind === option.id ? "● " : "○ "}{option.title}
+              </span>
+              <span className="text-[10px] font-mono block mt-1 leading-snug">{option.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* COLUMN 1: ORIGINAL CARD */}
@@ -157,7 +210,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
           <div className="flex items-center justify-between border-b border-[#1E1E1E] pb-2">
             <span className="text-[10px] font-mono tracking-widest font-bold text-red-500 uppercase flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
-              [01] ORIGINAL VERSION
+              [01] {isPremise ? "CARD A" : "ORIGINAL VERSION"}
             </span>
             {origExtractedName && (
               <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded uppercase">
@@ -196,7 +249,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
               <div className="space-y-2 py-1 flex flex-col items-center">
                 <img
                   src={origImgPreview}
-                  alt="Original Avatar"
+                  alt={`${leftLabel} Avatar`}
                   className="w-14 h-14 object-cover rounded-md border border-red-500/40 shadow-md"
                   referrerPolicy="no-referrer"
                 />
@@ -219,7 +272,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
               <div className="space-y-1 py-3 text-center">
                 <Upload size={20} className="text-zinc-600 mx-auto" />
                 <p className="text-[10px] font-mono text-zinc-400">
-                  Drag & Drop <span className="text-red-500 font-bold">Original PNG</span> card
+                  Drag & Drop <span className="text-red-500 font-bold">{leftLabel} PNG</span> card
                 </p>
                 <p className="text-[8px] font-mono text-zinc-600">
                   Or click to open file browser (PNG embedded chunks supported)
@@ -242,7 +295,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <textarea
               value={origDesc}
               onChange={(e) => setOrigDesc(e.target.value)}
-              placeholder="Paste original character prompt description here if you didn't upload a metadata-configured PNG or JSON file..."
+              placeholder={`Paste the ${leftLabel} character prompt description here if you didn't upload a metadata-configured PNG or JSON file...`}
               rows={5}
               className="w-full text-[11px] font-mono bg-black text-zinc-300 p-3 rounded-lg border border-[#222] focus:border-red-500 focus:outline-none placeholder-zinc-700 resize-y"
             />
@@ -252,13 +305,13 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <div className="flex items-center justify-between bg-[#0F0F0F] p-2.5 rounded-lg border border-[#1E1E1E]">
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={13} className="text-emerald-400" />
-                <span className="text-[10px] font-mono font-bold text-zinc-400">Original Prompt: Packed & Ready</span>
+                <span className="text-[10px] font-mono font-bold text-zinc-400">{leftLabel} Prompt: Packed & Ready</span>
               </div>
               <button
                 type="button"
                 onClick={origReset}
                 className="text-zinc-600 hover:text-zinc-300 transition"
-                title="Reset Original Card"
+                title={`Reset ${leftLabel}`}
               >
                 <RotateCcw size={12} />
               </button>
@@ -271,7 +324,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
           <div className="flex items-center justify-between border-b border-[#1E1E1E] pb-2">
             <span className="text-[10px] font-mono tracking-widest font-bold text-cyan-400 uppercase flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-              [02] REMAKE VERSION
+              [02] {isPremise ? "CARD B" : "REMAKE VERSION"}
             </span>
             {remakeExtractedName && (
               <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded uppercase">
@@ -310,7 +363,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
               <div className="space-y-2 py-1 flex flex-col items-center">
                 <img
                   src={remakeImgPreview}
-                  alt="Remake Avatar"
+                  alt={`${rightLabel} Avatar`}
                   className="w-14 h-14 object-cover rounded-md border border-cyan-400/40 shadow-md"
                   referrerPolicy="no-referrer"
                 />
@@ -333,7 +386,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
               <div className="space-y-1 py-3 text-center">
                 <Upload size={20} className="text-zinc-600 mx-auto" />
                 <p className="text-[10px] font-mono text-zinc-400">
-                  Drag & Drop <span className="text-cyan-400 font-bold">Remake PNG</span> card
+                  Drag & Drop <span className="text-cyan-400 font-bold">{rightLabel} PNG</span> card
                 </p>
                 <p className="text-[8px] font-mono text-zinc-600">
                   Or click to open file browser (PNG embedded chunks supported)
@@ -356,7 +409,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <textarea
               value={remakeDesc}
               onChange={(e) => setRemakeDesc(e.target.value)}
-              placeholder="Paste remake character prompt description here if you didn't upload a metadata-configured PNG or JSON file..."
+              placeholder={`Paste the ${rightLabel} character prompt description here if you didn't upload a metadata-configured PNG or JSON file...`}
               rows={5}
               className="w-full text-[11px] font-mono bg-black text-zinc-300 p-3 rounded-lg border border-[#222] focus:border-cyan-400 focus:outline-none placeholder-zinc-700 resize-y"
             />
@@ -366,13 +419,13 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <div className="flex items-center justify-between bg-[#0F0F0F] p-2.5 rounded-lg border border-[#1E1E1E]">
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={13} className="text-emerald-400" />
-                <span className="text-[10px] font-mono font-bold text-zinc-400">Remake Prompt: Packed & Ready</span>
+                <span className="text-[10px] font-mono font-bold text-zinc-400">{rightLabel} Prompt: Packed & Ready</span>
               </div>
               <button
                 type="button"
                 onClick={remakeReset}
                 className="text-zinc-600 hover:text-zinc-300 transition"
-                title="Reset Remake Card"
+                title={`Reset ${rightLabel}`}
               >
                 <RotateCcw size={12} />
               </button>
@@ -401,7 +454,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
         }`}
       >
         <ArrowRightLeft size={14} className={isLoading ? "" : "animate-pulse"} />
-        {isLoading ? "Running Comparative Character Analysis..." : "Initiate Design Combat Comparison"}
+        {isLoading ? "Running Comparative Character Analysis..." : isPremise ? "Run Same-Premise Head-to-Head" : "Run Remake Comparison"}
       </button>
     </form>
   );

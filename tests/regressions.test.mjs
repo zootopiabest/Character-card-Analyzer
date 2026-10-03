@@ -6,7 +6,7 @@ import { selectLatestModel, OPENROUTER_MODELS, migrateModel, DEFAULT_OPENROUTER_
 import { readProviderSettings } from '../src/providerSettings.ts';
 import { normalizeResult } from '../src/resultValidation.ts';
 import { tryExtractCharaMetadata } from '../src/utils.ts';
-import { runAnalyze, runCompare, runGroup, runMultichar, fetchDeepSeekModels, fetchOpenRouterCatalog } from '../src/aiClient.ts';
+import { runAnalyze, runCompare, runPremise, runGroup, runMultichar, fetchDeepSeekModels, fetchOpenRouterCatalog } from '../src/aiClient.ts';
 import { buildPrompt } from '../src/systemInstructions.ts';
 import { toBrowserModels, catalogAuthors, filterAndSortModels, formatPrice } from '../src/data/openrouterCatalog.ts';
 
@@ -31,11 +31,11 @@ test('refusal, empty output, and token exhaustion never become reports', async (
   }
 });
 test('main carries no age gate or content refusal rule', () => {
-  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) assert.doesNotMatch(buildPrompt(endpoint,[],efficient),/MANDATORY SAFETY REFUSAL/);
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) assert.doesNotMatch(buildPrompt(endpoint,[],efficient),/MANDATORY SAFETY REFUSAL/);
   assert.equal(existsSync(new URL('../src/components/AgeGate.tsx', import.meta.url)), false);
 });
 test('token-efficient grading sends a much smaller prompt with the same schema, modules, and standards', async () => {
-  for (const endpoint of ['analyze','compare','group','multichar']) {
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) {
     const full = buildPrompt(endpoint, ['boringTuesday','pissThemOff']);
     const lean = buildPrompt(endpoint, ['boringTuesday','pissThemOff'], true);
     assert.ok(lean.length < full.length * 0.7, `${endpoint}: ${lean.length} vs ${full.length}`);
@@ -51,7 +51,7 @@ test('token-efficient grading sends a much smaller prompt with the same schema, 
 test('both rubrics never penalize a character for being powerful', () => {
   // The user can strip any power with one reply, so "omnipotent in combat",
   // "removes tension", or "no failure state" is never a valid deduction.
-  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
     const prompt = buildPrompt(endpoint, [], efficient);
     for (const marker of [/Power is never a defect/, /struggles to generate friction/]) assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
   }
@@ -59,7 +59,7 @@ test('both rubrics never penalize a character for being powerful', () => {
 test('both rubrics never require a stated thaw mechanism for guarded characters', () => {
   // The archetype default for a guarded/slow-burn character is a gradual,
   // user-paced thaw, so "no rule for what lowers her guard" is not a defect.
-  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
     const prompt = buildPrompt(endpoint, [], efficient);
     for (const marker of [/Change mechanisms are never/, /permanent guardedness or unearned comfort/, /absent guardrail is never a defect|absent one is never a defect/]) assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
     assert.doesNotMatch(prompt, /falls back to endlessly escalating hostility/, `${endpoint} efficient=${efficient}`);
@@ -73,7 +73,7 @@ test('comparison never penalizes a remake for reusing the original premise', () 
   }
 });
 test('both rubrics treat diagnosis and trauma labels without behavior as slop, not taste', () => {
-  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
     const prompt = buildPrompt(endpoint, [], efficient);
     for (const marker of [/diagnosis or trauma labels|Diagnosis and trauma labels/, /cannot plausibly produce it/, /stays? neutral/]) assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
   }
@@ -82,7 +82,7 @@ test('both rubrics refuse credit for species-default ear/tail behavior', () => {
   // Every LLM plays ears/tails as mood displays unprompted, so a card that
   // states the obvious mapping must not be praised for it. Full and
   // efficient must carry the same standard.
-  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
     const prompt = buildPrompt(endpoint, [], efficient);
     for (const marker of [/Species-default BEHAVIOR/, /prehensile/, /Judge the override, never the appendage/, /species-default display/]) {
       assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
@@ -100,7 +100,7 @@ test('doesWorst is a card-construction defect field, never a genre or scope mism
   // always available, and never a defect, since the rubric grades a card
   // against its own contract. Both rubrics must demand a real construction
   // fault and must no longer offer a scope boundary as the easy way out.
-  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
     const prompt = buildPrompt(endpoint, [], efficient);
     const where = `${endpoint} efficient=${efficient}`;
     for (const marker of [/doesWorst is a defect field about the CARD/, /genre, scope, or use-case mismatch/,
@@ -111,7 +111,7 @@ test('doesWorst is a card-construction defect field, never a genre or scope mism
   }
   // The schema itself must stop advertising the escape hatch, in both audits
   // of a comparison as well as the single-card audit.
-  for (const endpoint of ['analyze','compare']) for (const efficient of [false, true]) {
+  for (const endpoint of ['analyze','compare','premise']) for (const efficient of [false, true]) {
     assert.match(buildPrompt(endpoint, [], efficient), /"doesWorst": "string; the CARD's weakest construction/);
   }
 });
@@ -119,7 +119,7 @@ test('per-greeting report card grades each greeting alone and never feeds the ca
   // The rubric forbids ranking, counting, or averaging greetings against each
   // other, so a module that grades them one by one must restate that rule and
   // must keep its own scores out of every graded field.
-  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
     const off = buildPrompt(endpoint, [], efficient);
     assert.doesNotMatch(off, /greetingBreakdown/, `${endpoint} efficient=${efficient} charges for an unselected module`);
     const on = buildPrompt(endpoint, ['greetingBreakdown'], efficient);
@@ -435,7 +435,7 @@ test('verification never spends the full report budget on a patch', async () => 
 });
 
 test('both rubrics protect specific likes, named works, and stated skill levels', () => {
-  for (const endpoint of ['analyze', 'compare', 'group', 'multichar']) for (const efficient of [false, true]) {
+  for (const endpoint of ['analyze', 'compare', 'premise', 'group', 'multichar']) for (const efficient of [false, true]) {
     const prompt = buildPrompt(endpoint, [], efficient);
     for (const marker of [/anti-hallucination value/, /name-dropping/, /list padding/, /burnt water/, /bounded specifics/]) {
       assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
@@ -553,4 +553,38 @@ test('Enter in a Model Settings text box never submits the analysis form', async
   const { readFileSync } = await import('node:fs');
   const source = readFileSync(new URL('../src/components/ModelSettings.tsx', import.meta.url), 'utf8');
   assert.match(source, /id="model-settings-panel"[\s\S]*?onKeyDown=\{[\s\S]*?e\.key === "Enter"[\s\S]*?preventDefault\(\)/);
+});
+
+// Same Premise comparison: two independent cards, neutral labels, one request.
+const premiseReport = (edge = 'even') => ({ cardA: good(), cardB: good(), comparison: { overallVerdict: 'About even.', sharedPremise: 'Homeless goth with trauma.', sharedGround: [{ element: 'Trauma backstory', edge, reason: 'Neither handles it better.' }], whereAWins: [], whereBWins: [], verdictScorecard: { cardAScore: 7, cardBScore: 7 } } });
+test('same-premise and remake comparisons send exactly one request, each with only its own rules', async () => {
+  for (const [run, own, foreign] of [
+    [() => runPremise({ cardADescription: 'A', cardBDescription: 'B' }, cfg), /NO INVENTED EDGES/, /SHARED PREMISE IS THE POINT OF A REMAKE|EPHEMERAL DATA/],
+    [() => runCompare({ originalDescription: 'A', remakeDescription: 'B' }, cfg), /SHARED PREMISE IS THE POINT OF A REMAKE/, /NO INVENTED EDGES|"cardA"/],
+  ]) {
+    const bodies = [];
+    globalThis.fetch = async (_url, options) => {
+      const body = JSON.parse(options.body); bodies.push(body);
+      return chat(JSON.stringify(/cardA/.test(body.messages[0].content) ? premiseReport() : { original: good(), remake: good(), comparison: { verdictScorecard: { originalScore: 7, remakeScore: 7 } } }));
+    };
+    await run();
+    assert.equal(bodies.length, 1);
+    assert.match(bodies[0].messages[0].content, own);
+    assert.doesNotMatch(bodies[0].messages[0].content, foreign);
+  }
+});
+test('same-premise prompt never treats originality or "the original" as quality, and allows ties', () => {
+  for (const efficient of [false, true]) {
+    const prompt = buildPrompt('premise', [], efficient);
+    for (const marker of [/Originality is not quality|ORIGINALITY IS NOT QUALITY/, /original card can still be badly built/, /tropey premise can win/, /mark (it )?"even"/, /never pad/, /"cardAScore"/, /"edge": "A" \| "B" \| "even"/]) assert.match(prompt, marker, `efficient=${efficient}`);
+    assert.doesNotMatch(prompt, /"original": \{|"remake": \{/, `efficient=${efficient}`);
+  }
+});
+test('same-premise reports validate edges and accept empty win lists', async () => {
+  globalThis.fetch = async () => chat(JSON.stringify(premiseReport()));
+  const result = await runPremise({ cardADescription: 'A', cardBDescription: 'B' }, cfg);
+  assert.deepEqual(result.comparison.whereAWins, []);
+  assert.equal(result.comparison.sharedGround[0].edge, 'even');
+  globalThis.fetch = async () => chat(JSON.stringify(premiseReport('original')));
+  await assert.rejects(runPremise({ cardADescription: 'A', cardBDescription: 'B' }, cfg), /invalid report/);
 });

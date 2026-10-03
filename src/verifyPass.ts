@@ -78,6 +78,16 @@ export function collectClaims(endpoint: string, data: any): Claim[] {
     add(out, "comparison.summaryOfChanges", data.comparison, "summaryOfChanges");
     addItems(out, "comparison.whatImproved", data.comparison, "whatImproved");
     addItems(out, "comparison.whatRegressed", data.comparison, "whatRegressed");
+  } else if (endpoint === "premise") {
+    auditClaims(out, data.cardA, "cardA.");
+    auditClaims(out, data.cardB, "cardB.");
+    add(out, "comparison.overallVerdict", data.comparison, "overallVerdict");
+    add(out, "comparison.sharedPremise", data.comparison, "sharedPremise");
+    if (Array.isArray(data.comparison?.sharedGround)) {
+      data.comparison.sharedGround.forEach((item: any, i: number) => add(out, `comparison.sharedGround[${i + 1}]`, item, "reason"));
+    }
+    addItems(out, "comparison.whereAWins", data.comparison, "whereAWins");
+    addItems(out, "comparison.whereBWins", data.comparison, "whereBWins");
   } else if (endpoint === "group") {
     add(out, "criticalAssessment", data, "criticalAssessment");
     for (const key of ["overallCompatibility", "roleplayPotential", "tokenBloatWarning"]) {

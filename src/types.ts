@@ -215,6 +215,31 @@ export interface MultiCharResult {
   verification?: VerificationSummary | null;
 }
 
+export interface SharedGroundItem {
+  element: string;
+  edge: "A" | "B" | "even";
+  reason: string;
+}
+
+// Same Premise comparison: two independent cards that share a premise or tropes.
+export interface PremiseResult {
+  requestModel?: string;
+  cardA: AnalysisResult;
+  cardB: AnalysisResult;
+  comparison: {
+    sharedPremise: string;
+    sharedGround: SharedGroundItem[];
+    whereAWins: string[];
+    whereBWins: string[];
+    overallVerdict: string;
+    verdictScorecard: {
+      cardAScore: number;
+      cardBScore: number;
+    };
+  };
+  verification?: VerificationSummary | null;
+}
+
 export interface ComparisonResult {
   requestModel?: string;
   original: AnalysisResult;

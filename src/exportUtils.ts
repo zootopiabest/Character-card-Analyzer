@@ -1,4 +1,4 @@
-import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult, VerificationSummary } from "./types";
+import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult, PremiseResult, VerificationSummary } from "./types";
 
 // The AI occasionally omits a field; guard every nested access so a slightly
 // off response can never break the export buttons.
@@ -186,6 +186,42 @@ export function generateComparisonMarkdown(data: ComparisonResult): string {
   md += `---\n\n`;
   md += `## Remake Character Audit\n\n`;
   md += generateAuditMarkdown(data.remake, "Remake Version");
+
+  return md;
+}
+
+const EDGE_LABEL = { A: "Card A", B: "Card B", even: "Even" } as const;
+
+export function generatePremiseMarkdown(data: PremiseResult): string {
+  let md = `# Same Premise Comparison\n\n`;
+
+  if (data.requestModel) md += `Model: ${data.requestModel}\n\n`;
+  md += verificationLine(data);
+  md += `## Overall Verdict\n`;
+  md += `${data.comparison.overallVerdict}\n\n`;
+  md += `### Scorecard\n`;
+  md += `- **Card A Verdict Score**: ${data.comparison.verdictScorecard?.cardAScore ?? "?"}/10\n`;
+  md += `- **Card B Verdict Score**: ${data.comparison.verdictScorecard?.cardBScore ?? "?"}/10\n\n`;
+  md += `### Shared Premise\n`;
+  md += `${data.comparison.sharedPremise}\n\n`;
+
+  md += `## Shared Ground\n`;
+  data.comparison.sharedGround.forEach(g => md += `- **${g.element}** (edge: ${EDGE_LABEL[g.edge]}): ${g.reason}\n`);
+  md += `\n### Where Card A Wins\n`;
+  if (data.comparison.whereAWins.length) data.comparison.whereAWins.forEach(i => md += `- ${i}\n`);
+  else md += `- None\n`;
+  md += `\n### Where Card B Wins\n`;
+  if (data.comparison.whereBWins.length) data.comparison.whereBWins.forEach(i => md += `- ${i}\n`);
+  else md += `- None\n`;
+  md += `\n`;
+
+  md += `---\n\n`;
+  md += `## Card A Audit\n\n`;
+  md += generateAuditMarkdown(data.cardA, "Card A");
+
+  md += `---\n\n`;
+  md += `## Card B Audit\n\n`;
+  md += generateAuditMarkdown(data.cardB, "Card B");
 
   return md;
 }

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Download, FileJson, FileText, ChevronDown, Clipboard, Check } from "lucide-react";
-import { downloadFile, generateAuditMarkdown, generateComparisonMarkdown, generateGroupMarkdown, generateMultiCharMarkdown } from "../exportUtils";
-import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult } from "../types";
+import { downloadFile, generateAuditMarkdown, generateComparisonMarkdown, generateGroupMarkdown, generateMultiCharMarkdown, generatePremiseMarkdown } from "../exportUtils";
+import { AnalysisResult, ComparisonResult, GroupResult, MultiCharResult, PremiseResult } from "../types";
 import VerificationBadge from "./VerificationBadge";
 
 interface ExportButtonsProps {
   data: any;
-  type: "audit" | "comparison" | "group" | "multichar";
+  type: "audit" | "comparison" | "premise" | "group" | "multichar";
   charName?: string;
 }
 
@@ -17,6 +17,7 @@ export default function ExportButtons({ data, type, charName }: ExportButtonsPro
   const buildMarkdown = (): string => {
     if (type === "audit") return generateAuditMarkdown(data as AnalysisResult, charName);
     if (type === "comparison") return generateComparisonMarkdown(data as ComparisonResult);
+    if (type === "premise") return generatePremiseMarkdown(data as PremiseResult);
     if (type === "group") return generateGroupMarkdown(data as GroupResult);
     return generateMultiCharMarkdown(data as MultiCharResult, charName);
   };

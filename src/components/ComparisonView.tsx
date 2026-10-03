@@ -1,35 +1,51 @@
 import { useState } from "react";
-import { Check, Award, AlertTriangle } from "lucide-react";
-import { ComparisonResult, AnalysisResult } from "../types";
+import { Check, Award, AlertTriangle, Scale } from "lucide-react";
+import { ComparisonResult, PremiseResult, AnalysisResult, SharedGroundItem } from "../types";
 import ReviewStats from "./ReviewStats";
 import Observations from "./Observations";
 import ImmersionSections from "./ImmersionSections";
 
-interface ComparisonViewProps {
-  comparisonData: ComparisonResult;
-}
+// "remake" = before/after of one card; "premise" = two independent cards that
+// share a premise. The same layout serves both, with neutral A/B labels and a
+// Shared Ground section in premise mode.
+type ComparisonViewProps =
+  | { kind: "remake"; comparisonData: ComparisonResult }
+  | { kind: "premise"; comparisonData: PremiseResult };
 
-export default function ComparisonView({ comparisonData }: ComparisonViewProps) {
+const EDGE_TEXT: Record<SharedGroundItem["edge"], string> = { A: "CARD A", B: "CARD B", even: "EVEN" };
+
+export default function ComparisonView(props: ComparisonViewProps) {
   const [activeTab, setActiveTab] = useState<"combat" | "original" | "remake">("combat");
 
-  const original = comparisonData?.original;
-  const remake = comparisonData?.remake;
-  const comparison = comparisonData?.comparison || {
-    overallVerdict: "AI Comparison Service Completed with Diagnostic Notes.",
-    summaryOfChanges: "Changes couldn't be automatically tabulated.",
-    whatImproved: [],
-    whatRegressed: [],
-    verdictScorecard: { originalScore: 5, remakeScore: 5 }
-  };
+  const isPremise = props.kind === "premise";
+  const original = props.kind === "premise" ? props.comparisonData.cardA : props.comparisonData.original;
+  const remake = props.kind === "premise" ? props.comparisonData.cardB : props.comparisonData.remake;
+  const leftLabel = isPremise ? "Card A" : "Original";
+  const rightLabel = isPremise ? "Card B" : "Remake";
 
-  const originalScore = original?.overallSlopScore ?? 50;
-  const remakeScore = remake?.overallSlopScore ?? 50;
-  // verdictScorecard is on a 0-10 scale (slop scores above are 0-100).
-  const scoreCard = comparison.verdictScorecard;
-  const scoreDiff = scoreCard.remakeScore - scoreCard.originalScore;
+  // Both modes are reduced to one shape for rendering.
+  const comparison = props.kind === "premise"
+    ? {
+        overallVerdict: props.comparisonData.comparison.overallVerdict,
+        summary: props.comparisonData.comparison.sharedPremise,
+        leftList: props.comparisonData.comparison.whereAWins,
+        rightList: props.comparisonData.comparison.whereBWins,
+        leftScore: props.comparisonData.comparison.verdictScorecard.cardAScore,
+        rightScore: props.comparisonData.comparison.verdictScorecard.cardBScore,
+        sharedGround: props.comparisonData.comparison.sharedGround,
+      }
+    : {
+        overallVerdict: props.comparisonData.comparison.overallVerdict,
+        summary: props.comparisonData.comparison.summaryOfChanges,
+        leftList: props.comparisonData.comparison.whatImproved,
+        rightList: props.comparisonData.comparison.whatRegressed,
+        leftScore: props.comparisonData.comparison.verdictScorecard.originalScore,
+        rightScore: props.comparisonData.comparison.verdictScorecard.remakeScore,
+        sharedGround: [] as SharedGroundItem[],
+      };
 
-  const originalSlopMeta = originalScore <= 25 ? "text-emerald-400 bg-emerald-950/20 border-emerald-500/20" : originalScore <= 60 ? "text-cyan-400 bg-cyan-950/20 border-cyan-500/20" : "text-yellow-400 bg-yellow-950/20 border-yellow-500/20";
-  const remakeSlopMeta = remakeScore <= 25 ? "text-emerald-400 bg-emerald-950/20 border-emerald-500/20" : remakeScore <= 60 ? "text-cyan-400 bg-cyan-950/20 border-cyan-500/20" : "text-yellow-400 bg-yellow-950/20 border-yellow-500/20";
+  // verdictScorecard is on a 0-10 scale (slop scores are 0-100).
+  const scoreDiff = comparison.rightScore - comparison.leftScore;
 
   return (
     <div id="comparison-view-root" className="space-y-6">
@@ -38,7 +54,7 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
       <div className="flex border-b border-[#1A1A1A] gap-2 pb-px overflow-x-auto">
         <button
           onClick={() => setActiveTab("combat")}
-          className={`px-4 py-2 font-mono text-[11px] uppercase tracking-widest border-b-2 transition-all ${
+          className={`px-4 py-2 whitespace-nowrap font-mono text-[11px] uppercase tracking-widest border-b-2 transition-all ${
             activeTab === "combat"
               ? "text-[#00F0FF] border-[#00F0FF]"
               : "text-zinc-500 border-transparent hover:text-zinc-300"
@@ -48,23 +64,23 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
         </button>
         <button
           onClick={() => setActiveTab("original")}
-          className={`px-4 py-2 font-mono text-[11px] uppercase tracking-widest border-b-2 transition-all ${
+          className={`px-4 py-2 whitespace-nowrap font-mono text-[11px] uppercase tracking-widest border-b-2 transition-all ${
             activeTab === "original"
               ? "text-red-400 border-red-500"
               : "text-zinc-500 border-transparent hover:text-zinc-300"
           }`}
         >
-          [ ORIGINAL CARD DIAGNOSTICS ]
+          [ {isPremise ? "CARD A" : "ORIGINAL CARD"} DIAGNOSTICS ]
         </button>
         <button
           onClick={() => setActiveTab("remake")}
-          className={`px-4 py-2 font-mono text-[11px] uppercase tracking-widest border-b-2 transition-all ${
+          className={`px-4 py-2 whitespace-nowrap font-mono text-[11px] uppercase tracking-widest border-b-2 transition-all ${
             activeTab === "remake"
               ? "text-cyan-400 border-[#00F0FF]"
               : "text-zinc-500 border-transparent hover:text-zinc-300"
           }`}
         >
-          [ REMAKE CARD DIAGNOSTICS ]
+          [ {isPremise ? "CARD B" : "REMAKE CARD"} DIAGNOSTICS ]
         </button>
       </div>
 
@@ -80,11 +96,11 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
               {/* Original Score */}
               <div className="md:col-span-4 text-center md:text-left space-y-2 max-w-[200px] mx-auto md:mx-0">
                 <span className="text-[10px] font-mono tracking-widest text-red-500 font-bold uppercase block">
-                  ORIGINAL SCORE
+                  {leftLabel.toUpperCase()} SCORE
                 </span>
                 <div className="flex items-baseline justify-center md:justify-start gap-1">
                   <span className="text-5xl font-black text-red-500 font-sans tracking-tight">
-                    {comparison?.verdictScorecard?.originalScore ?? 5}
+                    {comparison.leftScore}
                   </span>
                   <span className="text-xs font-mono text-zinc-600">/10</span>
                 </div>
@@ -96,24 +112,37 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
               {/* Central VS / Offset Indicator */}
               <div className="md:col-span-4 text-center py-4 md:py-0 border-y md:border-y-0 md:border-x border-[#1A1A1A] space-y-2">
                 <span className="text-[11px] font-mono tracking-widest text-zinc-500 font-bold uppercase block">
-                  EVOLUTION OFFSET
+                  {isPremise ? "EXECUTION EDGE" : "EVOLUTION OFFSET"}
                 </span>
-                <div className={`text-2xl font-black font-mono ${scoreDiff >= 0 ? "text-emerald-400" : "text-rose-500"}`}>
-                  {scoreDiff >= 0 ? `+${scoreDiff}` : scoreDiff} PTS
-                </div>
-                <div className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
-                  {scoreDiff > 1.5 ? "MEGA_UPGRADE" : scoreDiff > 0 ? "STABLE_UPGRADE" : scoreDiff === 0 ? "PERFECT_SIDEGRADE" : "QUALITY_DEGRADATION"}
-                </div>
+                {isPremise ? (
+                  <>
+                    <div className={`text-2xl font-black font-mono ${scoreDiff === 0 ? "text-zinc-300" : "text-emerald-400"}`}>
+                      {scoreDiff === 0 ? "EVEN" : `${scoreDiff > 0 ? "CARD B" : "CARD A"} +${Math.abs(scoreDiff)}`}
+                    </div>
+                    <div className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
+                      {Math.abs(scoreDiff) > 1.5 ? "CLEAR_WIN" : scoreDiff !== 0 ? "NARROW_EDGE" : "DEAD_HEAT"}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={`text-2xl font-black font-mono ${scoreDiff >= 0 ? "text-emerald-400" : "text-rose-500"}`}>
+                      {scoreDiff >= 0 ? `+${scoreDiff}` : scoreDiff} PTS
+                    </div>
+                    <div className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
+                      {scoreDiff > 1.5 ? "MEGA_UPGRADE" : scoreDiff > 0 ? "STABLE_UPGRADE" : scoreDiff === 0 ? "PERFECT_SIDEGRADE" : "QUALITY_DEGRADATION"}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Remake Score */}
               <div className="md:col-span-4 text-center md:text-right space-y-2 max-w-[200px] mx-auto md:mr-0 md:ml-auto">
                 <span className="text-[10px] font-mono tracking-widest text-[#00F0FF] font-bold uppercase block">
-                  REMAKE SCORE
+                  {rightLabel.toUpperCase()} SCORE
                 </span>
                 <div className="flex items-baseline justify-center md:justify-end gap-1">
                   <span className="text-5xl font-black text-[#00F0FF] font-sans tracking-tight">
-                    {comparison?.verdictScorecard?.remakeScore ?? 5}
+                    {comparison.rightScore}
                   </span>
                   <span className="text-xs font-mono text-zinc-600">/10</span>
                 </div>
@@ -139,10 +168,40 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
               </div>
             </div>
 
+            {isPremise && (
+              <span className="text-[9px] font-mono tracking-widest font-bold text-[#555] uppercase block">SHARED PREMISE</span>
+            )}
             <p className="text-xs leading-relaxed text-zinc-300 font-mono bg-[#050505] p-4 rounded-xl border border-[#141414]">
-              {comparison.summaryOfChanges}
+              {comparison.summary}
             </p>
           </div>
+
+          {/* SHARED GROUND (premise mode): element-by-element execution edge */}
+          {isPremise && (
+            <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-3.5">
+              <span className="text-[10px] font-mono tracking-wider font-bold text-[#00F0FF] uppercase flex items-center gap-2">
+                <Scale size={14} className="text-[#00F0FF]" />
+                SHARED GROUND // WHO HANDLES IT BETTER
+              </span>
+              {comparison.sharedGround.length > 0 ? (
+                <ul className="space-y-3">
+                  {comparison.sharedGround.map((item, index) => (
+                    <li key={index} className="text-xs font-mono text-zinc-300 leading-relaxed bg-[#050505] p-3 rounded-lg border border-[#141414] space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-white">{item.element}</span>
+                        <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border shrink-0 ${
+                          item.edge === "even" ? "text-zinc-300 border-zinc-700 bg-zinc-900" : item.edge === "A" ? "text-red-400 border-red-500/30 bg-red-950/20" : "text-cyan-400 border-cyan-500/30 bg-cyan-950/20"
+                        }`}>{EDGE_TEXT[item.edge]}</span>
+                      </div>
+                      <p className="text-zinc-400">{item.reason}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs font-mono text-zinc-500 italic">No shared premise elements were identified.</p>
+              )}
+            </div>
+          )}
 
           {/* HEAD-TO-HEAD PROS & CONS CHECKLISTS */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -151,12 +210,12 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
             <div className="border border-emerald-900/30 bg-[#070A08] p-5 rounded-xl space-y-3.5">
               <span className="text-[10px] font-mono tracking-wider font-bold text-emerald-400 uppercase flex items-center gap-2">
                 <Check size={14} className="bg-emerald-900/40 rounded-full p-0.5 text-emerald-400 border border-emerald-500/20" />
-                CONSTRUCTIVE IMPROVEMENTS // REWRITE WIN
+                {isPremise ? "WHERE CARD A WINS" : "CONSTRUCTIVE IMPROVEMENTS // REWRITE WIN"}
               </span>
 
-              {comparison.whatImproved && comparison.whatImproved.length > 0 ? (
+              {comparison.leftList.length > 0 ? (
                 <ul className="space-y-3">
-                  {comparison.whatImproved.map((item, index) => (
+                  {comparison.leftList.map((item, index) => (
                     <li key={index} className="text-xs font-mono text-zinc-300 leading-relaxed flex items-start gap-2.5">
                       <span className="text-emerald-500 font-bold block mt-0.5 select-none">+</span>
                       <span>{item}</span>
@@ -164,26 +223,32 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs font-mono text-zinc-500 italic">No significant improvements detected in this rewrite iteration.</p>
+                <p className="text-xs font-mono text-zinc-500 italic">{isPremise ? "No genuine advantage found for Card A." : "No significant improvements detected in this rewrite iteration."}</p>
               )}
             </div>
 
             {/* REGRESSIONS LIST */}
             <div className="border border-rose-950/20 bg-[#0A0708] p-5 rounded-xl space-y-3.5">
               <span className="text-[10px] font-mono tracking-wider font-bold text-rose-400 uppercase flex items-center gap-2">
-                <AlertTriangle size={14} className="bg-rose-950/40 rounded-full p-0.5 text-rose-400 border border-rose-500/20 animate-pulse" />
-                REGRESSIONS or ELEMENTS TO KEEP // ATTENTION REQUIRED
+                {isPremise ? (
+                  <Check size={14} className="bg-cyan-900/40 rounded-full p-0.5 text-cyan-400 border border-cyan-500/20" />
+                ) : (
+                  <AlertTriangle size={14} className="bg-rose-950/40 rounded-full p-0.5 text-rose-400 border border-rose-500/20 animate-pulse" />
+                )}
+                {isPremise ? "WHERE CARD B WINS" : "REGRESSIONS or ELEMENTS TO KEEP // ATTENTION REQUIRED"}
               </span>
 
-              {comparison.whatRegressed && comparison.whatRegressed.length > 0 ? (
+              {comparison.rightList.length > 0 ? (
                 <ul className="space-y-3">
-                  {comparison.whatRegressed.map((item, index) => (
+                  {comparison.rightList.map((item, index) => (
                     <li key={index} className="text-xs font-mono text-zinc-300 leading-relaxed flex items-start gap-2.5">
-                      <span className="text-rose-500 font-bold block mt-0.5 select-none">−</span>
+                      <span className={`${isPremise ? "text-cyan-400" : "text-rose-500"} font-bold block mt-0.5 select-none`}>{isPremise ? "+" : "−"}</span>
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
+              ) : isPremise ? (
+                <p className="text-xs font-mono text-zinc-500 italic">No genuine advantage found for Card B.</p>
               ) : (
                 <p className="text-xs font-mono text-emerald-400 bg-emerald-950/10 p-2.5 rounded border border-emerald-500/10 text-center font-bold">
                   ✓ NO REGRESSIONS DETECTED. THE UPGRADE WAS PRISTINE!
@@ -203,7 +268,7 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
               {/* ORIGINAL MATRIX */}
               <div className="border border-[#141414] bg-[#050505] p-4 rounded-lg space-y-2.5">
                 <span className="text-[9px] font-mono font-bold tracking-widest text-[#555] block uppercase">
-                  [ORIGINAL CAPABILITIES]
+                  [{leftLabel.toUpperCase()} CAPABILITIES]
                 </span>
                 <div className="space-y-1.5">
                   <div className="text-[10px] font-bold text-zinc-400">BEST RUNTIME EXECUTOR:</div>
@@ -222,7 +287,7 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
               {/* REMAKE MATRIX */}
               <div className="border border-[#141414] bg-[#050505] p-4 rounded-lg space-y-2.5">
                 <span className="text-[9px] font-mono font-bold tracking-widest text-[#00F0FF] block uppercase">
-                  [REMAKE CAPABILITIES]
+                  [{rightLabel.toUpperCase()} CAPABILITIES]
                 </span>
                 <div className="space-y-1.5">
                   <div className="text-[10px] font-bold text-[#00F0FF]">BEST RUNTIME EXECUTOR:</div>
@@ -246,7 +311,7 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
             <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-2">
               <span className="text-[10px] font-mono tracking-wider font-bold text-emerald-400 uppercase flex items-center gap-1.5 pb-2 border-b border-[#1A1A1A]">
                 <span className="h-1 w-1 bg-emerald-400 shadow-[0_0_4px_#34D399]" />
-                REMAKE GREETING SYNERGY
+                {rightLabel.toUpperCase()} GREETING SYNERGY
               </span>
               <p className="text-[11px] font-mono text-zinc-400 leading-relaxed italic">
                 {remake.firstMessageSynergy}
@@ -256,7 +321,7 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
             <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-2">
               <span className="text-[10px] font-mono tracking-wider font-bold text-[#FACC15] uppercase flex items-center gap-1.5 pb-2 border-b border-[#1A1A1A]">
                 <span className="h-1 w-1 bg-[#FACC15] shadow-[0_0_4px_#FACC15]" />
-                REMAKE HIDDEN DYNAMIC
+                {rightLabel.toUpperCase()} HIDDEN DYNAMIC
               </span>
               <p className="text-[11px] font-mono text-zinc-400 leading-relaxed italic">
                 {remake.hiddenDynamic}
@@ -273,13 +338,13 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
               </span>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1 text-zinc-400">
-                  <div className="text-[9px] font-mono font-black uppercase text-red-400">[ORIGINAL EXTRACT]</div>
+                  <div className="text-[9px] font-mono font-black uppercase text-red-400">[{leftLabel.toUpperCase()} EXTRACT]</div>
                   <p className="text-xs leading-relaxed italic bg-black/60 p-3 rounded border border-[#141414]">
                     {original.creatorNotesBlurb || "None detected."}
                   </p>
                 </div>
                 <div className="space-y-1 text-zinc-300">
-                  <div className="text-[9px] font-mono font-black uppercase text-cyan-400">[REMAKE EXTRACT]</div>
+                  <div className="text-[9px] font-mono font-black uppercase text-cyan-400">[{rightLabel.toUpperCase()} EXTRACT]</div>
                   <p className="text-xs leading-relaxed italic bg-black/60 p-3 rounded border border-[#141414]">
                     {remake.creatorNotesBlurb || "None detected."}
                   </p>
@@ -294,7 +359,7 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
       {activeTab === "original" && (
         <div className="space-y-6 animate-fadeIn">
           <div className="border border-red-500/20 bg-red-950/5 p-4 rounded-xl text-center text-xs font-mono text-red-400 uppercase tracking-wider">
-            Original Version Diagnostic Audit Workspace
+            {leftLabel} Diagnostic Audit Workspace
           </div>
           <IndividualAuditPanel analysis={original} />
         </div>
@@ -303,7 +368,7 @@ export default function ComparisonView({ comparisonData }: ComparisonViewProps) 
       {activeTab === "remake" && (
         <div className="space-y-6 animate-fadeIn">
           <div className="border border-cyan-500/20 bg-cyan-950/5 p-4 rounded-xl text-center text-xs font-mono text-cyan-400 uppercase tracking-wider">
-            Remake Version Diagnostic Audit Workspace
+            {rightLabel} Diagnostic Audit Workspace
           </div>
           <IndividualAuditPanel analysis={remake} />
         </div>

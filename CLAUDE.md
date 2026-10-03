@@ -27,6 +27,8 @@ The app has four analysis **modes** (`appMode` in `src/App.tsx`): `audit` (singl
 - a **handler** in `App.tsx` (`handleAnalyze` / `handleCompare` / `handleGroup` / `handleMultiCharAnalyze`) that calls the matching runner,
 - a **view component** (`ComparisonView` / `GroupView` / `MultiCharView`; single audit renders inline in `App.tsx`).
 
+Comparison mode has two **comparison types**, chosen by the visible radio toggle at the top of `ComparisonInput` (persisted as `loresieve_comparison_kind`): **Remake** (before/after of one card → `runCompare`, endpoint `compare`, `ComparisonResult` with `original`/`remake`) and **Same Premise** (two independent cards sharing a premise or tropes → `runPremise`, endpoint `premise`, `PremiseResult` with neutral `cardA`/`cardB`, a `sharedGround` list of `{element, edge: "A"|"B"|"even", reason}`, and `whereAWins`/`whereBWins`). Each run sends exactly one request with only its own instructions — the remake-only rules (ephemeral-field migration, "shared premise is the point of a remake") never reach a premise prompt and vice versa; a regression test enforces this. `ComparisonView` renders both via its `kind` prop. The premise rules are owner decisions: originality is never quality ("the original" and novelty earn nothing; a tropey card can win), ties are valid, and an empty win list or an "even" edge is required rather than an invented advantage.
+
 Note `CardInput` is reused for both `audit` and `multichar` modes — in multichar it's passed `supportsVisualAudit={false}` because that mode extracts embedded card text but does not send the image to the model.
 
 ### The request path (`src/aiClient.ts`)

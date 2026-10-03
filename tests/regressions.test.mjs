@@ -641,3 +641,13 @@ test('both rubrics credit body traits that drive behavior and protect role-flexi
     assert.match(prompt, /launch state, not stranded characterization/, where);
   }
 });
+test('both rubrics treat narrated user actions in greetings and user content in examples as scripting', () => {
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
+    const prompt = buildPrompt(endpoint, [], efficient);
+    const where = `${endpoint} efficient=${efficient}`;
+    assert.match(prompt, /only precedent before the user/, where);
+    assert.match(prompt, /getting up from (the|a) couch/, where);
+    assert.match(prompt, /must contain only the character/, where);
+    assert.doesNotMatch(prompt, /not whether the user is the subject of a verb/, where);
+  }
+});

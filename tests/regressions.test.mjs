@@ -56,6 +56,15 @@ test('both rubrics never penalize a character for being powerful', () => {
     for (const marker of [/Power is never a defect/, /struggles to generate friction/]) assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
   }
 });
+test('both rubrics never require a stated thaw mechanism for guarded characters', () => {
+  // The archetype default for a guarded/slow-burn character is a gradual,
+  // user-paced thaw, so "no rule for what lowers her guard" is not a defect.
+  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+    const prompt = buildPrompt(endpoint, [], efficient);
+    for (const marker of [/Change mechanisms are never/, /permanent guardedness or unearned comfort/, /absent guardrail is never a defect|absent one is never a defect/]) assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
+    assert.doesNotMatch(prompt, /falls back to endlessly escalating hostility/, `${endpoint} efficient=${efficient}`);
+  }
+});
 test('both rubrics refuse credit for species-default ear/tail behavior', () => {
   // Every LLM plays ears/tails as mood displays unprompted, so a card that
   // states the obvious mapping must not be praised for it. Full and

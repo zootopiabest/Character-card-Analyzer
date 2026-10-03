@@ -576,7 +576,7 @@ test('same-premise and remake comparisons send exactly one request, each with on
 test('same-premise prompt never treats originality or "the original" as quality, and allows ties', () => {
   for (const efficient of [false, true]) {
     const prompt = buildPrompt('premise', [], efficient);
-    for (const marker of [/Originality is not quality|ORIGINALITY IS NOT QUALITY/, /original card can still be badly built/, /tropey premise can win/, /mark (it )?"even"/, /never pad/, /"cardAScore"/, /"edge": "A" \| "B" \| "even"/]) assert.match(prompt, marker, `efficient=${efficient}`);
+    for (const marker of [/Originality is not quality|ORIGINALITY IS NOT QUALITY/, /original card can still be badly built/, /tropey premise can win/, /mark (it )?"even"/, /never pad/, /different approach (to the same element )?is not an edge/, /equal execution, not good execution/, /"cardAScore"/, /"edge": "A" \| "B" \| "even"/]) assert.match(prompt, marker, `efficient=${efficient}`);
     assert.doesNotMatch(prompt, /"original": \{|"remake": \{/, `efficient=${efficient}`);
   }
 });

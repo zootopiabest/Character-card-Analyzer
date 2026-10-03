@@ -331,7 +331,7 @@ ORIGINALITY IS NOT QUALITY:
 Who had the idea first, which card is "the original," and whether one borrowed from the other are irrelevant and never mentioned as a strength or a weakness. A novel premise earns nothing by itself — an original card can still be badly built — and a familiar, tropey premise can win outright when it is handled better. Judge execution only: what each card does with the shared material, per the rubric below. Creator notes about inspiration or derivation stay neutral metadata.
 
 NO INVENTED EDGES:
-sharedGround lists only elements actually present in both cards. For each, give the edge to the card that genuinely handles it better and say why with evidence from both texts; when neither does it better, mark it "even" and say so — never manufacture a difference to avoid a tie. whereAWins and whereBWins hold only real execution advantages; leave either array empty when that card has none, and never pad one side to look balanced. A lopsided result is a valid result, and so is "about even."
+sharedGround lists only elements actually present in both cards. For each, give the edge to the card that genuinely handles it better and say why with evidence from both texts; when neither does it better, mark it "even" and say so — never manufacture a difference to avoid a tie. whereAWins and whereBWins hold only real execution advantages; leave either array empty when that card has none, and never pad one side to look balanced. A lopsided result is a valid result, and so is "about even." A different approach to the same element is not an edge by itself — judge each approach on its own terms, and two different approaches can be equally strong or equally weak. "even" means equal execution, not good execution: its reason must say whether both handle the element well or both handle it badly.
 
 SCORING CONSISTENCY & FAIRNESS (CRITICAL):
 Score each card on its own absolute merits, EXACTLY as you would if it were the only card in front of you. Do not grade on a curve relative to the other card: a weak card next to a worse one is still weak, and a strong card next to a better one is still strong.
@@ -452,7 +452,7 @@ COMPARISON COVERAGE: complete single-card audits for both versions (all fields e
 
 Originality is not quality: who had the idea first, which card is "the original," and any borrowing are irrelevant and never a strength or weakness. A novel premise earns nothing by itself and an original card can still be badly built; a familiar, tropey premise can win outright when handled better. Judge execution only. Creator notes about inspiration or derivation stay neutral.
 
-No invented edges: sharedGround lists only elements present in both cards, each with the edge "A", "B", or "even" and the evidence that decides it — mark "even" and say so when neither handles it better. whereAWins and whereBWins hold only real execution advantages; leave either empty when a card has none, and never pad a side to look balanced. Lopsided and "about even" are both valid outcomes.
+No invented edges: sharedGround lists only elements present in both cards, each with the edge "A", "B", or "even" and the evidence that decides it — mark "even" and say so when neither handles it better. whereAWins and whereBWins hold only real execution advantages; leave either empty when a card has none, and never pad a side to look balanced. Lopsided and "about even" are both valid outcomes. A different approach is not an edge by itself; two different approaches can be equally strong or equally weak, and "even" means equal execution, not good execution — say whether both handle it well or both badly.
 
 ${EFFICIENT_RUBRIC}
 
@@ -566,7 +566,7 @@ const PREMISE_SCHEMA_TEMPLATE = `\n\nYour entire output must be a single valid J
   "comparison": {
     "sharedPremise": "string; the premise, tropes, and story beats both cards share, stated neutrally — never which came first or who owns the idea",
     "sharedGround": [
-      { "element": "string; one premise element or trope present in BOTH cards", "edge": "A" | "B" | "even", "reason": "string; the concrete execution difference that decides it — for even, say plainly that neither handles it better and why" }
+      { "element": "string; one premise element or trope present in BOTH cards", "edge": "A" | "B" | "even", "reason": "string; the concrete execution difference that decides it — for even, say plainly that neither handles it better and whether both handle it well or both badly" }
     ],
     "whereAWins": ["string; only genuine execution advantages of Card A — leave the array empty if there are none"],
     "whereBWins": ["string; only genuine execution advantages of Card B — leave the array empty if there are none"],

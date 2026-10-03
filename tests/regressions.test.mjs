@@ -72,6 +72,12 @@ test('comparison never penalizes a remake for reusing the original premise', () 
     assert.match(prompt, /never framed as copying/, `efficient=${efficient}`);
   }
 });
+test('both rubrics treat diagnosis and trauma labels without behavior as slop, not taste', () => {
+  for (const endpoint of ['analyze','compare','group','multichar']) for (const efficient of [false, true]) {
+    const prompt = buildPrompt(endpoint, [], efficient);
+    for (const marker of [/diagnosis or trauma labels|Diagnosis and trauma labels/, /cannot plausibly produce it/, /stays? neutral/]) assert.match(prompt, marker, `${endpoint} efficient=${efficient}`);
+  }
+});
 test('both rubrics refuse credit for species-default ear/tail behavior', () => {
   // Every LLM plays ears/tails as mood displays unprompted, so a card that
   // states the obvious mapping must not be praised for it. Full and

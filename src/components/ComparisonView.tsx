@@ -45,7 +45,8 @@ export default function ComparisonView(props: ComparisonViewProps) {
       };
 
   // verdictScorecard is on a 0-10 scale (slop scores are 0-100).
-  const scoreDiff = comparison.rightScore - comparison.leftScore;
+  // Rounded to one decimal so float noise never reaches the screen.
+  const scoreDiff = Math.round((comparison.rightScore - comparison.leftScore) * 10) / 10;
 
   return (
     <div id="comparison-view-root" className="space-y-6">
@@ -306,27 +307,33 @@ export default function ComparisonView(props: ComparisonViewProps) {
             </div>
           </div>
           
-          {/* BEHAVIOR ENHANCEMENTS GRID */}
+          {/* BEHAVIOR ENHANCEMENTS GRID: both cards, so neither side's paid-for fields go unseen */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-2">
-              <span className="text-[10px] font-mono tracking-wider font-bold text-emerald-400 uppercase flex items-center gap-1.5 pb-2 border-b border-[#1A1A1A]">
-                <span className="h-1 w-1 bg-emerald-400 shadow-[0_0_4px_#34D399]" />
-                {rightLabel.toUpperCase()} GREETING SYNERGY
-              </span>
-              <p className="text-[11px] font-mono text-zinc-400 leading-relaxed italic">
-                {remake.firstMessageSynergy}
-              </p>
-            </div>
-            
-            <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-2">
-              <span className="text-[10px] font-mono tracking-wider font-bold text-[#FACC15] uppercase flex items-center gap-1.5 pb-2 border-b border-[#1A1A1A]">
-                <span className="h-1 w-1 bg-[#FACC15] shadow-[0_0_4px_#FACC15]" />
-                {rightLabel.toUpperCase()} HIDDEN DYNAMIC
-              </span>
-              <p className="text-[11px] font-mono text-zinc-400 leading-relaxed italic">
-                {remake.hiddenDynamic}
-              </p>
-            </div>
+            {[
+              { card: original, label: leftLabel },
+              { card: remake, label: rightLabel },
+            ].map(({ card, label }) => (
+              <div key={label} className="space-y-4">
+                <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-2">
+                  <span className="text-[10px] font-mono tracking-wider font-bold text-emerald-400 uppercase flex items-center gap-1.5 pb-2 border-b border-[#1A1A1A]">
+                    <span className="h-1 w-1 bg-emerald-400 shadow-[0_0_4px_#34D399]" />
+                    {label.toUpperCase()} GREETING SYNERGY
+                  </span>
+                  <p className="text-[11px] font-mono text-zinc-400 leading-relaxed italic">
+                    {card.firstMessageSynergy}
+                  </p>
+                </div>
+                <div className="border border-[#1A1A1A] bg-[#0A0A0A] rounded-xl p-5 space-y-2">
+                  <span className="text-[10px] font-mono tracking-wider font-bold text-[#FACC15] uppercase flex items-center gap-1.5 pb-2 border-b border-[#1A1A1A]">
+                    <span className="h-1 w-1 bg-[#FACC15] shadow-[0_0_4px_#FACC15]" />
+                    {label.toUpperCase()} HIDDEN DYNAMIC
+                  </span>
+                  <p className="text-[11px] font-mono text-zinc-400 leading-relaxed italic">
+                    {card.hiddenDynamic}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* CREATOR NOTES COMPARISON */}

@@ -339,7 +339,11 @@ Each card's overallSlopScore and coreAnalysis sub-scores must reflect that card 
 
 ` + SHARED_RUBRIC + `
 
-Return your evaluation as a strict JSON matching the schema.`;
+BEHAVIOR & IMMERSION DETAILS: Provide doesBest and doesWorst for both cards. doesWorst follows REQUIRED-FIELD DISCIPLINE on each card — the weakest construction in that card, never a genre or scope mismatch. These are diagnostics, not automatic scoring evidence — do not invent advantages or weaknesses merely because the schema asks for them.
+
+Tone: Be highly cynical, witty, sardonic, extremely direct, and brutally honest but deeply insightful about how each card handles the shared material. Keep each text field concise — aim for 2-4 sharp sentences — so the full JSON fits comfortably in the response. Favor specific, cutting insight over length.
+
+Above all else, DO NOT BE A SYCOPHANT. If an idea is bad or poorly executed, say so. If the bot sucks... Say so.`;
 
 const FULL_INSTRUCTIONS = {
   analyze: analyzeSystemInstruction,

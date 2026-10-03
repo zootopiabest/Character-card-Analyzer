@@ -84,7 +84,12 @@ export function normalizeResult(endpoint: "analyze" | "compare" | "premise" | "g
     strings(comparison, ["overallVerdict", "sharedPremise"]);
     for (const item of list(comparison, "sharedGround")) {
       object(item, "sharedGround");
-      if (!["A", "B", "even"].includes(item.edge)) invalid("sharedGround.edge");
+      // Casing/wording variants ("Even", "a", "Card B", "tie") name the same
+      // verdict; anything else is not a verdict and fails the report.
+      const edge = typeof item.edge === "string" ? item.edge.trim().toLowerCase().replace(/^card\s+/, "") : "";
+      if (edge === "a" || edge === "b") item.edge = edge.toUpperCase();
+      else if (edge === "even" || edge === "tie") item.edge = "even";
+      else invalid("sharedGround.edge");
       strings(item, ["element", "reason"]);
     }
     stringList(comparison, "whereAWins");

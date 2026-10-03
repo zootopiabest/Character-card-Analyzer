@@ -588,3 +588,22 @@ test('same-premise reports validate edges and accept empty win lists', async () 
   globalThis.fetch = async () => chat(JSON.stringify(premiseReport('original')));
   await assert.rejects(runPremise({ cardADescription: 'A', cardBDescription: 'B' }, cfg), /invalid report/);
 });
+test('same-premise edge casing variants are normalized instead of discarding the report', async () => {
+  for (const [raw, expected] of [['Even', 'even'], ['tie', 'even'], ['a', 'A'], ['Card B', 'B'], [' b ', 'B']]) {
+    globalThis.fetch = async () => chat(JSON.stringify(premiseReport(raw)));
+    const result = await runPremise({ cardADescription: 'A', cardBDescription: 'B' }, cfg);
+    assert.equal(result.comparison.sharedGround[0].edge, expected, raw);
+  }
+  for (const raw of ['C', '', 'both', null]) {
+    globalThis.fetch = async () => chat(JSON.stringify(premiseReport(raw)));
+    await assert.rejects(runPremise({ cardADescription: 'A', cardBDescription: 'B' }, cfg), /invalid report/, String(raw));
+  }
+});
+test('premise prompts in both rubrics carry no remake-only rules, and the full one keeps output concise', () => {
+  for (const efficient of [false, true]) {
+    const prompt = buildPrompt('premise', [], efficient);
+    for (const remakeOnly of [/point of a remake/i, /ephemeral/i, /whatImproved|whatRegressed/]) assert.doesNotMatch(prompt, remakeOnly, `efficient=${efficient}`);
+    assert.match(prompt, /2-4 sharp sentences/, `efficient=${efficient}`);
+  }
+  assert.match(buildPrompt('premise', [], false), /DO NOT BE A SYCOPHANT/);
+});

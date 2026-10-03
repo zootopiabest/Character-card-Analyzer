@@ -116,7 +116,8 @@ export default function App() {
     maxOutputTokens: number = 32768,
     efficientGrading: boolean = false,
     verifyPass: boolean = false,
-    kind: ComparisonKind = "remake"
+    kind: ComparisonKind = "remake",
+    analyzerNotes: string | null = null
   ) => {
     setIsLoading(true);
     setError(null);
@@ -126,9 +127,9 @@ export default function App() {
       const cfg = { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass };
       // Exactly one request per run: the selected type decides which prompt is sent.
       if (kind === "premise") {
-        setComparisonResult({ kind, data: await runPremise({ cardADescription: originalDescription, cardBDescription: remakeDescription }, cfg) });
+        setComparisonResult({ kind, data: await runPremise({ cardADescription: originalDescription, cardBDescription: remakeDescription, analyzerNotes }, cfg) });
       } else {
-        setComparisonResult({ kind, data: await runCompare({ originalDescription, remakeDescription }, cfg) });
+        setComparisonResult({ kind, data: await runCompare({ originalDescription, remakeDescription, analyzerNotes }, cfg) });
       }
     } catch (err: any) {
       console.error(err);
@@ -149,7 +150,8 @@ export default function App() {
     modules: ImmersionModuleId[] = [],
     maxOutputTokens: number = 32768,
     efficientGrading: boolean = false,
-    verifyPass: boolean = false
+    verifyPass: boolean = false,
+    analyzerNotes: string | null = null
   ) => {
     setIsLoading(true);
     setError(null);
@@ -157,7 +159,7 @@ export default function App() {
 
     try {
       const result = await runGroup(
-        { characters },
+        { characters, analyzerNotes },
         { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass }
       );
       setGroupResult(result);

@@ -361,7 +361,7 @@ async function run(
 
 function analyzerNotesBlock(notes: string | null | undefined): string {
   if (!notes || !notes.trim()) return "";
-  return `\n[OOC/ANALYZER NOTES - EXTERNAL CONTEXT FOR YOU, THE AUDITOR]\nCRITICAL INSTRUCTION: The user has provided the following external context. You MUST take this into account when evaluating the card and DO NOT penalize choices that are explicitly justified by these notes:\n"""\n${notes}\n"""`;
+  return `\n[OOC/ANALYZER NOTES - EXTERNAL CONTEXT FOR YOU, THE AUDITOR]\nCRITICAL INSTRUCTION: The user has provided the following external context. You MUST take this into account when evaluating the card(s) and DO NOT penalize choices that are explicitly justified by these notes:\n"""\n${notes}\n"""`;
 }
 
 export function runAnalyze(
@@ -381,10 +381,10 @@ export function runAnalyze(
 }
 
 export function runCompare(
-  p: { originalDescription: string; remakeDescription: string },
+  p: { originalDescription: string; remakeDescription: string; analyzerNotes?: string | null },
   cfg: RunnerConfig
 ): Promise<any> {
-  const sourceText = `ORIGINAL CHARACTER DESCRIPTION:\n"""\n${p.originalDescription}\n"""\n\nREMAKE CHARACTER DESCRIPTION:\n"""\n${p.remakeDescription}\n"""`;
+  const sourceText = `ORIGINAL CHARACTER DESCRIPTION:\n"""\n${p.originalDescription}\n"""\n\nREMAKE CHARACTER DESCRIPTION:\n"""\n${p.remakeDescription}\n"""${analyzerNotesBlock(p.analyzerNotes)}`;
   const userText = `Compare original vs remake character designs.\n\n${sourceText}`;
   return run("compare", userText, [], cfg, sourceText);
 }
@@ -392,21 +392,21 @@ export function runCompare(
 // Same Premise comparison: two independent cards that share a premise or
 // tropes. Neutral A/B labels so neither card is framed as the original.
 export function runPremise(
-  p: { cardADescription: string; cardBDescription: string },
+  p: { cardADescription: string; cardBDescription: string; analyzerNotes?: string | null },
   cfg: RunnerConfig
 ): Promise<any> {
-  const sourceText = `CARD A DESCRIPTION:\n"""\n${p.cardADescription}\n"""\n\nCARD B DESCRIPTION:\n"""\n${p.cardBDescription}\n"""`;
+  const sourceText = `CARD A DESCRIPTION:\n"""\n${p.cardADescription}\n"""\n\nCARD B DESCRIPTION:\n"""\n${p.cardBDescription}\n"""${analyzerNotesBlock(p.analyzerNotes)}`;
   const userText = `Compare two independent character cards that share a premise or tropes, and judge which executes it better.\n\n${sourceText}`;
   return run("premise", userText, [], cfg, sourceText);
 }
 
 export function runGroup(
-  p: { characters: Array<{ name: string; description: string }> },
+  p: { characters: Array<{ name: string; description: string }>; analyzerNotes?: string | null },
   cfg: RunnerConfig
 ): Promise<any> {
   const userText = p.characters
     .map((c, i) => `CHAR_${i + 1} (${c.name}):\n${c.description}`)
-    .join("\n\n------\n\n");
+    .join("\n\n------\n\n") + analyzerNotesBlock(p.analyzerNotes);
   return run("group", userText, [], cfg);
 }
 

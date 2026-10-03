@@ -607,3 +607,25 @@ test('premise prompts in both rubrics carry no remake-only rules, and the full o
   }
   assert.match(buildPrompt('premise', [], false), /DO NOT BE A SYCOPHANT/);
 });
+test('OOC analyzer notes reach the model in every mode, and an empty box adds nothing', async () => {
+  const groupReport = { groupSlopScore: 5, criticalAssessment: 'Compatible.', synergyAnalysis: {}, characterBreakdowns: [{ name: 'A' }], groupScenarios: {} };
+  const multicharReport = { overallSlopScore: 5, criticalAssessment: 'Coherent world.', worldAndSystemAnalysis: { worldBuilding: { score: 8 }, systemRulesAdherence: { score: 8 } }, characterAssessments: [], playScenarios: {} };
+  const remakeReport = { original: good(), remake: good(), comparison: { verdictScorecard: { originalScore: 7, remakeScore: 7 } } };
+  const runners = [
+    [good(), (n) => runAnalyze({ ...params, analyzerNotes: n }, cfg)],
+    [remakeReport, (n) => runCompare({ originalDescription: 'A', remakeDescription: 'B', analyzerNotes: n }, cfg)],
+    [premiseReport(), (n) => runPremise({ cardADescription: 'A', cardBDescription: 'B', analyzerNotes: n }, cfg)],
+    [groupReport, (n) => runGroup({ characters: [{ name: 'A', description: 'A' }], analyzerNotes: n }, cfg)],
+    [multicharReport, (n) => runMultichar({ description: 'World', analyzerNotes: n }, cfg)],
+  ];
+  for (const [report, run] of runners) {
+    for (const [notes, present] of [['PARODY_ON_PURPOSE', true], ['   ', false], [null, false]]) {
+      let user = '';
+      globalThis.fetch = async (_url, options) => { user = JSON.parse(options.body).messages.at(-1).content; return chat(JSON.stringify(report)); };
+      await run(notes);
+      const text = typeof user === 'string' ? user : JSON.stringify(user);
+      assert.equal(text.includes('OOC/ANALYZER NOTES'), present, `${run} notes=${JSON.stringify(notes)}`);
+      if (present) assert.match(text, /PARODY_ON_PURPOSE/);
+    }
+  }
+});

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Upload, X, Plus } from "lucide-react";
 import { readCardFile } from "../utils";
+import AnalyzerNotesBox from "./AnalyzerNotesBox";
 import ModelSettingsPanel, { useModelSettings } from "./ModelSettings";
 import ImmersionModulesPanel, { useImmersionModules } from "./ImmersionModulesPanel";
 import { ImmersionModuleId } from "../immersionModules";
@@ -17,7 +18,8 @@ interface GroupInputProps {
     modules?: ImmersionModuleId[],
     maxOutputTokens?: number,
     efficientGrading?: boolean,
-    verifyPass?: boolean
+    verifyPass?: boolean,
+    analyzerNotes?: string | null
   ) => void;
   isLoading: boolean;
 }
@@ -34,6 +36,7 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
     { id: "1", name: "", description: "", previewUrl: null },
     { id: "2", name: "", description: "", previewUrl: null },
   ]);
+  const [analyzerNotes, setAnalyzerNotes] = useState("");
 
   // Shared provider/model/key/thinking settings (persisted as they change).
   const settings = useModelSettings();
@@ -110,7 +113,8 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
       immersion.enabled,
       settings.outputLimit,
       settings.efficientGrading,
-      settings.verifyPass
+      settings.verifyPass,
+      analyzerNotes.trim() ? analyzerNotes : null
     );
   };
 
@@ -202,6 +206,12 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
           </div>
         )}
       </div>
+
+      <AnalyzerNotesBox
+        value={analyzerNotes}
+        onChange={setAnalyzerNotes}
+        placeholder="e.g., 'These three are written as a deliberately dysfunctional found family...'"
+      />
 
       {/* Optional immersion modules (produced per roster member, so off by default) */}
       <ImmersionModulesPanel m={immersion} />

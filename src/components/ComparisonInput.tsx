@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Upload, CheckCircle2, RotateCcw, ArrowRightLeft } from "lucide-react";
 import { readCardFile } from "../utils";
+import AnalyzerNotesBox from "./AnalyzerNotesBox";
 import ModelSettingsPanel, { useModelSettings } from "./ModelSettings";
 import ImmersionModulesPanel, { useImmersionModules } from "./ImmersionModulesPanel";
 import { ImmersionModuleId } from "../immersionModules";
@@ -23,7 +24,8 @@ interface ComparisonInputProps {
     maxOutputTokens?: number,
     efficientGrading?: boolean,
     verifyPass?: boolean,
-    kind?: ComparisonKind
+    kind?: ComparisonKind,
+    analyzerNotes?: string | null
   ) => void;
   isLoading: boolean;
 }
@@ -48,6 +50,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
     try { localStorage.setItem(KIND_KEY, next); } catch { /* per-viewer convenience only */ }
   };
   const isPremise = kind === "premise";
+  const [analyzerNotes, setAnalyzerNotes] = useState("");
   const leftLabel = isPremise ? "Card A" : "Original";
   const rightLabel = isPremise ? "Card B" : "Remake";
 
@@ -168,7 +171,8 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
       settings.outputLimit,
       settings.efficientGrading,
       settings.verifyPass,
-      kind
+      kind,
+      analyzerNotes.trim() ? analyzerNotes : null
     );
   };
 
@@ -434,6 +438,13 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
         </div>
 
       </div>
+
+      {/* One OOC box for the whole comparison; refer to the cards by their labels */}
+      <AnalyzerNotesBox
+        value={analyzerNotes}
+        onChange={setAnalyzerNotes}
+        placeholder={`e.g., '${leftLabel} is meant to be a parody, ${rightLabel} is played straight...'`}
+      />
 
       {/* Optional immersion modules (produced for both cards, so off by default) */}
       <ImmersionModulesPanel m={immersion} />

@@ -629,3 +629,15 @@ test('OOC analyzer notes reach the model in every mode, and an empty box adds no
     }
   }
 });
+test('both rubrics credit body traits that drive behavior and protect role-flexible relationships', () => {
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
+    const prompt = buildPrompt(endpoint, [], efficient);
+    const where = `${endpoint} efficient=${efficient}`;
+    // A physical trait that shapes backstory, wardrobe, or mannerisms is characterization.
+    assert.match(prompt, /drives? (the character|backstory)/, where);
+    assert.match(prompt, /crowding out/, where);
+    // Greetings that cast {{user}} in different roles keep the profile relationship open on purpose.
+    assert.match(prompt, /cast \{\{user\}\} in different roles/, where);
+    assert.match(prompt, /launch state, not stranded characterization/, where);
+  }
+});

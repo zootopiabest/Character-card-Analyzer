@@ -30,6 +30,11 @@ Personhood is not a pass/fail checkbox. A few quirks or a backstory explanation 
 Sexual behavior itself can provide that individuality. Do not strip out sexuality and demand a separate SFW personality, outside goals, hobbies, romantic selectivity, or broader genre range. Conversely, a kink inventory plus stock personality labels is not strong characterization merely because it is coherent or fulfills its fantasy. The same applies to a nonsexual inventory of virtues, trauma, aesthetics, or powers.
 Judge functional dominance, not word-count percentages: does the hook express a particular person, or does mostly interchangeable material stand in for one? Credit the actual distinctions, not the existence of an explanation or the number of details.`;
 
+const RUNTIME_QUALITY = `RUNTIME QUALITY:
+Require specific behavior, speech, emotional logic, boundaries, and identity sufficient to sustain the intended experience. Long-form play requires sustainable interaction possibilities, not ongoing conflict. Routines, cooperation, professional decisions, affection, quiet awkwardness, and disagreements can all support play; require tension or resistance only where the card's own premise calls for it.
+Drama, dysfunction, financial distress, and conspicuous hooks earn no automatic quality bonus or comparative edge. Stability, competence, financial responsibility, and cooperation incur no penalty and earn no automatic bonus either. Judge the particular perspective, choices, and interactions the text supports, not their intensity. In comparisons, examine both cards' supplied behavior before awarding an edge; a louder source of conflict is not evidence of better execution.
+Weak runtime means interchangeable responses, unsupported behavior, or repetition that cannot sustain the promised scope. A recurring routine is not a shallow loop merely because it is calm; an escalating crisis is not depth merely because it generates events. A finite scenario may coherently end.`;
+
 // Shared evaluation rubric used verbatim by all five analyzer prompts.
 // Kept in one place so a rule change applies to every mode at once.
 const SHARED_RUBRIC = `EVIDENCE DISCIPLINE:
@@ -52,7 +57,7 @@ Tropes are neutral. Do not penalize common archetypes, wish fulfillment, romance
 
 Tropes and wish fulfillment become defects only when they replace characterization instead of expressing it, flatten the character into a reward object, erase agency, loop the same behavior every scene, exist only as labels or aesthetics, force one user role despite AnyPOV labeling, or contradict the card's own stated personality, boundaries, attachment logic, distrust, slow-burn structure, or current emotional state — the contradiction list under COHESION is the single authority for that last case.
 
-Always name the structural failure; do not just say "bait." Functional bait creates clear roleplay entry points while preserving character behavior, boundaries, agency, and plausible friction. Corrosive bait overrides characterization, agency, boundaries, plausibility, or emotional logic to flatter or reward the user too easily.
+Always name the structural failure; do not just say "bait." Functional bait creates clear roleplay entry points while preserving character behavior, boundaries, agency, and plausible choices. Corrosive bait overrides characterization, agency, boundaries, plausibility, or emotional logic to flatter or reward the user too easily.
 
 Do not label a premise savior-complex or adoption fantasy solely because a character is vulnerable. Apply that critique only when the greeting or profile assigns the user a rescuing role, assumes the user's kindness, guarantees the character's gratitude or dependence, or frames the user as uniquely safe or special.
 
@@ -193,7 +198,7 @@ Penalize cards that claim AnyPOV but force:
 RUNTIME ABILITY AND SCOPE:
 First determine the card's intended scope: open-ended long-form play, recurring relationship play, limited scenario play, one-shot interaction, genre loop, or world simulation. Demand long-chat durability only when the card promises or strongly implies long-form play; a perfect one-shot or narrow scenario may score as highly as an open-ended companion if it executes its intended scope cleanly. Cozy and slice-of-life cards need no high-stakes drama, friction, or internal conflict — they earn replayability through charming routines, emotional warmth, and subtle quirks; judge replayability by how well the card executes its intended genre. A user rejecting the central hook does not need to unlock a new genre — a coherent refusal, consequence, departure, or ending is sufficient.
 
-High runtime ability requires clear behavior, speech, and boundaries; emotional logic; specific habits; a non-interchangeable identity; room for varied scenes appropriate to the scope; internal friction where the intended genre calls for it; and durable conflict beyond one gimmick only when long-form play is actually promised. Low runtime ability: one-note loops, generic horny availability, reactive-only characterization with no underlying perspective, no believable resistance where the card's own premise implies it, no quiet mode, no way to handle a user who rejects the main hook.
+${RUNTIME_QUALITY}
 
 CRAFT SPOTLIGHT AND MISREAD CHECK:
 Every audit includes "The Detail Doing the Most Work": quote or precisely identify one supplied detail and explain its concrete contribution to behavioral inference, voice, relationships, or scenario function. Choose for function, not ornamental prose; never choose a species-default display (see ANATOMY AND VISUAL CONTINUITY OVERRIDE); do not invent several benefits or exceptional depth to fill it. If nothing stands out, name the strongest available anchor and state its limited contribution. Optionally add "Most Memorable Detail" when a different detail merits a distinct observation — memorability is not a scoring axis. For comparisons, select independently per version; for ensembles, keep one brief spotlight per person-like character, or a system detail when the card has no personas.
@@ -374,7 +379,7 @@ Initiative is not agency or quality. Passive, dependent, submissive, reactive, s
 
 Tropes and appealing or repellent premises are neutral ingredients. Familiar archetypes, wish fulfillment, vulnerability, dominance, romance bait, kink hooks, monsters, immediate affection, and sexual access become defects only when they erase identity or agency, collapse boundaries, contradict emotional logic, falsely restrict advertised user freedom, or reduce runtime to one reward loop. Novelty and trope subversion earn nothing by themselves.
 
-Call bait functional when it launches play while preserving identity, limits, friction, and plausible choices; corrosive when it overrides those things for guaranteed user reward. Vulnerability is not automatically rescue fantasy; require actual user-as-savior framing, presumed kindness, guaranteed dependence or gratitude, or unique-safety worship.
+Call bait functional when it launches play while preserving identity, limits, agency, and plausible choices; corrosive when it overrides those things for guaranteed user reward. Vulnerability is not automatically rescue fantasy; require actual user-as-savior framing, presumed kindness, guaranteed dependence or gratitude, or unique-safety worship.
 
 ${CHARACTER_QUALITY}
 Demand attachment logic only when the card makes attachment central. Sexual contradictions and collapsed boundaries follow the ordinary Cohesion rules.
@@ -391,7 +396,8 @@ RUNTIME CONSTRUCTION (dimensions, not complaint quotas):
 - Depth: reward details that improve behavioral inference, voice, choices, relationships, or plausible scenes; hobbies may simply add texture. Specificity is anti-hallucination value: a stated competence level, rank, or named work of taste pins a dial the LLM would otherwise roll at random ("good cook" prevents both Michelin output and burnt water). "Likes books" is the defect that naming four authors fixes. Never call specific likes, named works, stated skill levels, or a preference list "name-dropping," "list padding," "trivia," or a cost for not being load-bearing, in a score or in any prose field; credit the uncertainty resolved, not automatic depth or distinctive identity; RESTRAINT penalizes interchangeable superlatives, never bounded specifics. Penalize trauma, lore, or biography that only decorates, excuses reward, or consumes context without plausible runtime value.
 - Creator Craft: judge specific, usable guidance, not bullets versus prose, XML versus Markdown, or explicit versus implicit trait statements. A mostly generic profile remains weak despite a few concrete details. Strategic anti-hallucination redundancy is valid; duplicated filler is not.
 - Profile Voice: judge how effectively the description communicates register, perspective, and behavior to an LLM. Plain labels, bullets, direct explanation, and character-colored prose are equally valid; no literary viewpoint is required. Criticize product copy or synonym piles only when they fail to provide usable distinctions.
-- Runtime Ability: require stable behavior, speech, emotional logic, boundaries, habits, choice space, and identity across the promised scope. Plot initiative, broad scene variety, and mandatory resistance are not universal requirements.
+
+${RUNTIME_QUALITY}
 
 Runtime clarity alone proves little. A perfectly reliable praise, obedience, or sexual loop can still be a vending machine rather than a character.
 

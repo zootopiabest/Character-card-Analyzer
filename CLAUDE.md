@@ -57,6 +57,8 @@ The full rubric is written so each standard is stated once; cross-references ("s
 
 **Optional Anti-sycophancy toggle.** Model Settings saves `loresieve_anti_sycophancy` across modes (off by default). `RunnerConfig.antiSycophancy` makes `aiClient.ts` inject the owner's rule at the end of the grading input, after the card, analyzer notes, and images (depth-zero equivalent), in both rubric modes and every grading endpoint. Text-only chat requests append it to the user message; image requests and Gemini place it in the final text part. It is not appended to the initial system prompt. It never enters the separate evidence-verification prompt. Keep it optional and last.
 
+`RUNTIME_QUALITY` is shared verbatim by both rubrics. Long-form play requires sustainable interaction possibilities, not ongoing conflict. Drama, dysfunction, and financial distress receive no automatic advantage over quiet routines, cooperation, competence, or financial responsibility; none earns a bonus merely by existing. Judge specific supported behavior within scope, and examine both cards' evidence before assigning comparative edges. Do not reintroduce mandatory friction into roleplay hooks or treat calm repetition as inherently shallow.
+
 ### Immersion modules (optional, toggleable report sections)
 
 Eight extra creative sections (dating profile, against-type shopping list, top songs, demise/obituary, psychoanalysis, emotional registers, the Boring Tuesday test, three ways to piss them off) are **user-toggleable per mode** and only requested from the model when checked — the schema is assembled per request, so unchecked modules cost zero output tokens. The moving parts:

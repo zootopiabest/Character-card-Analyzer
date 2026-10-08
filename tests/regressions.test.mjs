@@ -74,6 +74,23 @@ test('all grading modes share graduated, genre-neutral characterization standard
     assert.doesNotMatch(prompt, /Penalize only when the character functionally ceases to exist|never call its text "crowding out"|replace nearly all concrete characterization|erotically dominant/, where);
   }
 });
+test('every grading mode receives the same runtime standard without a drama advantage', () => {
+  let runtimeStandard;
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
+    const prompt = buildPrompt(endpoint, [], efficient);
+    const where = `${endpoint} efficient=${efficient}`;
+    const blocks = prompt.match(/RUNTIME QUALITY:\n[\s\S]*?A finite scenario may coherently end\./g);
+    assert.equal(blocks?.length, 1, where);
+    runtimeStandard ??= blocks[0];
+    assert.equal(blocks[0], runtimeStandard, where);
+    assert.match(blocks[0], /Long-form play requires sustainable interaction possibilities, not ongoing conflict/, where);
+    assert.match(blocks[0], /financial distress[\s\S]*no automatic quality bonus or comparative edge/, where);
+    assert.match(blocks[0], /financial responsibility[\s\S]*no penalty and earn no automatic bonus/, where);
+    assert.match(blocks[0], /examine both cards' supplied behavior before awarding an edge/, where);
+    assert.match(blocks[0], /A recurring routine is not a shallow loop merely because it is calm/, where);
+    assert.doesNotMatch(prompt, /durable conflict beyond one gimmick|preserving[^.\n]*\bfriction\b|no quiet mode/, where);
+  }
+});
 test('both rubrics never penalize a character for being powerful', () => {
   // The user can strip any power with one reply, so "omnipotent in combat",
   // "removes tension", or "no failure state" is never a valid deduction.

@@ -95,7 +95,7 @@ test('Boring Tuesday and Piss Them Off module shapes validate', () => {
   for (const bad of [{...good(), boringTuesday:'nope'}, {...good(), pissThemOff:{trivial:1}}]) assert.throws(() => normalizeResult('analyze', bad), /invalid report/);
   assert.equal(normalizeResult('group', {groupSlopScore:5,criticalAssessment:'Fine.',synergyAnalysis:{},characterBreakdowns:[{name:'A',boringTuesday:'Shrugs.',pissThemOff:'Nothing.'}],groupScenarios:{}}).characterBreakdowns[0].pissThemOff, 'Nothing.');
 });
-test('doesWorst is a card-construction defect field, never a genre or scope mismatch', () => {
+test('doesWorst requires defects within the intended genre and frontend scope', () => {
   // The old wording invited "struggles in high-action genres" — always true,
   // always available, and never a defect, since the rubric grades a card
   // against its own contract. Both rubrics must demand a real construction
@@ -108,6 +108,12 @@ test('doesWorst is a card-construction defect field, never a genre or scope mism
       assert.match(prompt, marker, where);
     }
     assert.doesNotMatch(prompt, /name an intentional scope boundary instead/, where);
+    assert.equal((prompt.match(/FRONTEND SCOPE:\n/g) || []).length, 1, where);
+    assert.match(prompt, /cross-frontend portability is required only when promised/, where);
+    assert.match(prompt, /Compatibility criticism requires evidence of failure in the intended setup/, where);
+    assert.match(prompt, /Explicitly supplied runtime behavior overrides the field defaults/, where);
+    assert.match(prompt, /Unless the supplied setup explicitly keeps them in context/, where);
+    assert.doesNotMatch(prompt, /frontend-hostile|broken, mixed|do not hedge this on frontend settings|assume examples are not pinned/, where);
   }
   // The schema itself must stop advertising the escape hatch, in both audits
   // of a comparison as well as the single-card audit.

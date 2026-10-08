@@ -447,7 +447,7 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
               </label>
             </div>
             <p id="anti-sycophancy-description" className="text-[9px] text-zinc-500 font-mono leading-relaxed">
-              Adds a final reminder to judge honestly, avoid invented positives, and reserve high scores for genuinely good cards. Off by default; your choice is saved across modes.
+              Places your anti-sycophancy reminder after the cards and images, immediately before the response. Off by default; your choice is saved across modes.
             </p>
           </div>
 

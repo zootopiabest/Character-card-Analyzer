@@ -395,8 +395,8 @@ test('verification sends a second rubric-free call and patches only the named cl
 test('a clean verification reports every claim supported and changes nothing', async () => {
   const calls = scripted(JSON.stringify(verifiable()), JSON.stringify({ fixes: [] }));
   const result = await runAnalyze(params, { ...cfg, verifyPass: true, antiSycophancy: true });
-  assert.match(calls[0].messages[0].content, /FINAL INSTRUCTIONS — ANTI-SYCOPHANCY/);
-  assert.doesNotMatch(calls[1].messages[0].content, /FINAL INSTRUCTIONS — ANTI-SYCOPHANCY|You are known to be a sycophant/);
+  assert.match(calls[0].messages.at(-1).content, /FINAL INSTRUCTIONS — ANTI-SYCOPHANCY/);
+  assert.doesNotMatch(JSON.stringify(calls[1].messages), /FINAL INSTRUCTIONS — ANTI-SYCOPHANCY|You are known to be a sycophant/);
   assert.equal(result.verification.status, 'clean');
   assert.equal(result.verification.corrected, 0);
   assert.ok(result.verification.checked > 5);
@@ -649,19 +649,50 @@ test('anti-sycophancy is optional and reaches every grading request as the final
   ];
   for (const [endpoint, report, run] of runners) for (const efficientGrading of [false, true]) {
     const c = { ...cfg, efficientGrading, modules: ['boringTuesday'] };
-    const prompts = [];
+    const requests = [];
     globalThis.fetch = async (_url, options) => {
-      prompts.push(JSON.parse(options.body).messages[0].content);
+      requests.push(JSON.parse(options.body));
       return chat(JSON.stringify(report));
     };
     await run(c);
     await run({ ...c, antiSycophancy: false });
     await run({ ...c, antiSycophancy: true });
-    assert.equal(prompts.length, 3);
-    assert.equal(prompts[0], buildPrompt(endpoint, c.modules, efficientGrading));
-    assert.equal(prompts[1], prompts[0]);
-    assert.equal(prompts[2], prompts[0] + suffix, `${endpoint} efficient=${efficientGrading}`);
-    assert.ok(prompts[2].indexOf('JSON SCHEMA:') < prompts[2].indexOf('FINAL INSTRUCTIONS — ANTI-SYCOPHANCY:'));
+    assert.equal(requests.length, 3);
+    assert.deepEqual(requests[0], requests[1]);
+    for (const request of requests) {
+      assert.equal(request.messages[0].content, buildPrompt(endpoint, c.modules, efficientGrading));
+      assert.doesNotMatch(request.messages[0].content, /FINAL INSTRUCTIONS — ANTI-SYCOPHANCY/);
+    }
+    assert.equal(requests[2].messages.at(-1).content, requests[0].messages.at(-1).content + suffix,
+      `${endpoint} efficient=${efficientGrading}`);
+  }
+});
+test('anti-sycophancy follows the card, notes, and image in every provider payload', async () => {
+  for (const provider of ['openrouter', 'openai', 'deepseek', 'custom', 'gemini']) {
+    for (const withImage of [false, true]) for (const enabled of [false, true]) {
+      let body;
+      globalThis.fetch = async (_url, options) => {
+        body = JSON.parse(options.body);
+        return provider === 'gemini'
+          ? { ok: true, json: async () => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(good()) }] } }] }) }
+          : chat(JSON.stringify(good()));
+      };
+      await runAnalyze({ ...params, description: 'CARD_TAIL', analyzerNotes: 'NOTES_TAIL',
+        imageBase64: withImage ? 'FAKE_IMAGE' : null, imageMimeType: withImage ? 'image/png' : null },
+        { ...cfg, provider, customBaseUrl: 'https://example.test/v1', antiSycophancy: enabled });
+      const system = provider === 'gemini' ? body.systemInstruction.parts[0].text : body.messages[0].content;
+      assert.doesNotMatch(system, /FINAL INSTRUCTIONS — ANTI-SYCOPHANCY/);
+      const content = provider === 'gemini' ? body.contents.at(-1).parts : body.messages.at(-1).content;
+      const parts = typeof content === 'string' ? [{ text: content }] : content;
+      const texts = parts.filter(p => p.text).map(p => p.text);
+      assert.match(texts[0], /CARD_TAIL[\s\S]*NOTES_TAIL/);
+      assert.equal(parts.filter(p => p.inlineData || p.type === 'image_url').length, withImage ? 1 : 0);
+      assert.equal(JSON.stringify(content).includes('FINAL INSTRUCTIONS — ANTI-SYCOPHANCY:'), enabled);
+      if (enabled) {
+        assert.ok(parts.at(-1).text.endsWith('Do not be a sycophant.'), provider);
+        if (withImage) assert.match(parts.at(-1).text, /^\n\nFINAL INSTRUCTIONS — ANTI-SYCOPHANCY:/);
+      }
+    }
   }
 });
 test('both rubrics credit body traits that drive behavior and protect role-flexible relationships', () => {

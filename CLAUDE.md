@@ -53,7 +53,7 @@ Judgment stances the rubric commits to (owner decisions — don't relitigate the
 
 The full rubric is written so each standard is stated once; cross-references ("see COHESION", "the contradiction list under COHESION") are deliberate — don't re-inline a rule into a second section, extend the section that owns it.
 
-**Optional Anti-sycophancy toggle.** Model Settings saves `loresieve_anti_sycophancy` across modes (off by default). `RunnerConfig.antiSycophancy` passes it to `buildPrompt`, which appends the owner's rule after all module asks and the JSON schema, in both rubric modes and every grading endpoint. It never enters the separate evidence-verification prompt. Keep it optional and last.
+**Optional Anti-sycophancy toggle.** Model Settings saves `loresieve_anti_sycophancy` across modes (off by default). `RunnerConfig.antiSycophancy` makes `aiClient.ts` inject the owner's rule at the end of the grading input, after the card, analyzer notes, and images (depth-zero equivalent), in both rubric modes and every grading endpoint. Text-only chat requests append it to the user message; image requests and Gemini place it in the final text part. It is not appended to the initial system prompt. It never enters the separate evidence-verification prompt. Keep it optional and last.
 
 ### Immersion modules (optional, toggleable report sections)
 

@@ -4,7 +4,7 @@
 // the app to the chosen provider using the user's own API key (BYOK). The
 // prompt instructions are imported straight from systemInstructions.ts, so the
 // app needs no backend at all and can be packaged into a mobile app.
-import { buildPrompt, buildVerifyPrompt } from "./systemInstructions";
+import { buildPrompt, buildVerifyPrompt, ANTI_SYCOPHANCY_FINAL } from "./systemInstructions";
 import type { ImmersionModuleId } from "./immersionModules";
 import { safeParseJSON } from "./utils";
 import { normalizeResult } from "./resultValidation";
@@ -28,7 +28,7 @@ export interface RunnerConfig {
   maxOutputTokens?: number;
   // "Token-Efficient Grading": send the condensed rubric instead of the full one.
   efficientGrading?: boolean;
-  // Append the optional anti-sycophancy rule as the final grading instructions.
+  // Inject the optional rule after the card and images, immediately before generation.
   antiSycophancy?: boolean;
   // "Evidence Verification": after the report comes back, fact-check its prose
   // claims against the card in a second call and correct unsupported ones.
@@ -46,7 +46,7 @@ interface ImagePart {
 // The system prompt is assembled per request so it only demands the immersion
 // modules the user actually enabled.
 function systemContent(endpoint: EndpointType, cfg: RunnerConfig): string {
-  return buildPrompt(endpoint, cfg.modules ?? [], cfg.efficientGrading ?? false, cfg.antiSycophancy ?? false);
+  return buildPrompt(endpoint, cfg.modules ?? [], cfg.efficientGrading ?? false);
 }
 
 function providerLabel(provider: string): string {
@@ -103,7 +103,8 @@ async function callOpenAICompatible(
   systemText: string,
   userText: string,
   images: ImagePart[],
-  cfg: RunnerConfig
+  cfg: RunnerConfig,
+  finalInstructions: string = ""
 ): Promise<ProviderReply> {
   const url = chatCompletionsUrl(cfg.provider, cfg.customBaseUrl);
 
@@ -114,8 +115,9 @@ async function callOpenAICompatible(
           type: "image_url",
           image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
         })),
+        ...(finalInstructions ? [{ type: "text", text: finalInstructions }] : []),
       ]
-    : userText;
+    : userText + finalInstructions;
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${cfg.apiKey.trim()}`,
@@ -182,7 +184,8 @@ async function callGemini(
   systemText: string,
   userText: string,
   images: ImagePart[],
-  cfg: RunnerConfig
+  cfg: RunnerConfig,
+  finalInstructions: string = ""
 ): Promise<ProviderReply> {
   const model = normalizeModel(cfg.model, "gemini");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
@@ -193,6 +196,7 @@ async function callGemini(
   for (const img of images) {
     parts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } });
   }
+  if (finalInstructions) parts.push({ text: finalInstructions });
 
   const res = await fetch(url, {
     method: "POST",
@@ -322,12 +326,15 @@ async function run(
     }
   }
   cfg = { ...cfg, model, maxOutputTokens };
-  const dispatch = (systemText: string, text: string, imgs: ImagePart[], c: RunnerConfig) =>
+  const dispatch = (systemText: string, text: string, imgs: ImagePart[], c: RunnerConfig, finalInstructions: string = "") =>
     c.provider === "gemini"
-      ? callGemini(systemText, text, imgs, c)
-      : callOpenAICompatible(systemText, text, imgs, c);
+      ? callGemini(systemText, text, imgs, c, finalInstructions)
+      : callOpenAICompatible(systemText, text, imgs, c, finalInstructions);
 
-  const reply = await dispatch(systemContent(endpoint, cfg), userText, images, cfg);
+  // Depth-zero equivalent: nothing from the card, notes, or images follows this
+  // instruction. Pass it only to grading; the verifier gets no grading reminder.
+  const reply = await dispatch(systemContent(endpoint, cfg), userText, images, cfg,
+    cfg.antiSycophancy ? ANTI_SYCOPHANCY_FINAL : "");
   let parsed: any;
   try {
     parsed = safeParseJSON(reply.text);

@@ -25,7 +25,8 @@ interface ComparisonInputProps {
     efficientGrading?: boolean,
     verifyPass?: boolean,
     kind?: ComparisonKind,
-    analyzerNotes?: string | null
+    analyzerNotes?: string | null,
+    antiSycophancy?: boolean
   ) => void;
   isLoading: boolean;
 }
@@ -172,7 +173,8 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
       settings.efficientGrading,
       settings.verifyPass,
       kind,
-      analyzerNotes.trim() ? analyzerNotes : null
+      analyzerNotes.trim() ? analyzerNotes : null,
+      settings.antiSycophancy
     );
   };
 

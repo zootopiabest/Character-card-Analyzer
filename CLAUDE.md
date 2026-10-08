@@ -53,6 +53,8 @@ Judgment stances the rubric commits to (owner decisions — don't relitigate the
 
 The full rubric is written so each standard is stated once; cross-references ("see COHESION", "the contradiction list under COHESION") are deliberate — don't re-inline a rule into a second section, extend the section that owns it.
 
+**Optional Anti-sycophancy toggle.** Model Settings saves `loresieve_anti_sycophancy` across modes (off by default). `RunnerConfig.antiSycophancy` passes it to `buildPrompt`, which appends the owner's rule after all module asks and the JSON schema, in both rubric modes and every grading endpoint. It never enters the separate evidence-verification prompt. Keep it optional and last.
+
 ### Immersion modules (optional, toggleable report sections)
 
 Eight extra creative sections (dating profile, against-type shopping list, top songs, demise/obituary, psychoanalysis, emotional registers, the Boring Tuesday test, three ways to piss them off) are **user-toggleable per mode** and only requested from the model when checked — the schema is assembled per request, so unchecked modules cost zero output tokens. The moving parts:

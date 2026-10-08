@@ -2,6 +2,9 @@ import type { ImmersionModuleId } from "./immersionModules";
 
 const AUDITOR_PERSONA = `You are a blunt, witty, sardonic but fair character-card auditor for LLM roleplay. Report strengths and defects without flattery or manufactured criticism. Tone does not determine grades. Do not propose rewrites.`;
 
+const ANTI_SYCOPHANCY_FINAL = `\n\nFINAL INSTRUCTIONS — ANTI-SYCOPHANCY:
+You are known to be a sycophant. DO not be. If this card sucks, then say it sucks. If it is just okay, say it is just okay. You don't have to be nice because you're afraid of upsetting anyone. Don't call a card good just because you want someone happy. Reserve high scores for cards that are actually good. Don't invent positives for positives sake. Do not be a sycophant.`;
+
 const FRONTEND_SCOPE = `FRONTEND SCOPE:
 Judge the intended frontend and personal setup supplied by the card or analyzer notes. Frontend-specific syntax, macros, fields, extensions, and personal-use choices are neutral; cross-frontend portability is required only when promised. "Some frontends will ignore this" is neither a deduction nor a doesWorst finding. Compatibility criticism requires evidence of failure in the intended setup or violation of an explicit portability promise. Unknown frontend behavior is not evidence of failure. Explicitly supplied runtime behavior overrides the field defaults below; never invent support or incompatibility.`;
 
@@ -661,42 +664,45 @@ function perCharModuleFields(modules: ImmersionModuleId[], indent: string): stri
 // for one endpoint and the user's selected modules. This is the only entry
 // point aiClient.ts uses. `efficient` swaps the full rubric set for the
 // compact one (the "Token-Efficient Grading" toggle); the schema templates
-// and module fragments are shared, so results render identically.
+// and module fragments are shared, so results render identically. The optional
+// anti-sycophancy rule is appended last, after every module and the schema.
 export function buildPrompt(
   endpoint: "analyze" | "compare" | "premise" | "group" | "multichar",
   modules: ImmersionModuleId[],
-  efficient: boolean = false
+  efficient: boolean = false,
+  antiSycophancy: boolean = false
 ): string {
   const set = efficient ? EFFICIENT_INSTRUCTIONS : FULL_INSTRUCTIONS;
+  const finish = (prompt: string) => antiSycophancy ? prompt + ANTI_SYCOPHANCY_FINAL : prompt;
   if (endpoint === "analyze") {
-    return (
+    return finish(
       set.analyze +
       moduleInstructionBlock(modules, "solo") +
       ANALYZE_SCHEMA_TEMPLATE.replace("__MODULE_FIELDS__", soloModuleFields(modules, "  "))
     );
   }
   if (endpoint === "compare") {
-    return (
+    return finish(
       set.compare +
       moduleInstructionBlock(modules, "both") +
       COMPARE_SCHEMA_TEMPLATE.split("__CARD_MODULE_FIELDS__").join(soloModuleFields(modules, "    "))
     );
   }
   if (endpoint === "premise") {
-    return (
+    return finish(
       set.premise +
       moduleInstructionBlock(modules, "both") +
       PREMISE_SCHEMA_TEMPLATE.split("__CARD_MODULE_FIELDS__").join(soloModuleFields(modules, "    "))
     );
   }
   if (endpoint === "group") {
-    return (
+    return finish(
       set.group +
       moduleInstructionBlock(modules, "perCharacter") +
       GROUP_SCHEMA_TEMPLATE.replace("__PER_CHAR_MODULE_FIELDS__", perCharModuleFields(modules, "      "))
     );
   }
-  return (
+  return finish(
     set.multichar +
     moduleInstructionBlock(modules, "perCharacter") +
     MULTICHAR_SCHEMA_TEMPLATE.replace("__PER_CHAR_MODULE_FIELDS__", perCharModuleFields(modules, "      "))

@@ -79,7 +79,8 @@ export default function App() {
     modules: ImmersionModuleId[] = [],
     maxOutputTokens: number = 32768,
     efficientGrading: boolean = false,
-    verifyPass: boolean = false
+    verifyPass: boolean = false,
+    antiSycophancy: boolean = false
   ) => {
     setIsLoading(true);
     setError(null);
@@ -88,7 +89,7 @@ export default function App() {
     try {
       const result = await runAnalyze(
         { description, imageBase64, imageMimeType, analyzerNotes },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass, antiSycophancy }
       );
       setAnalysis(result);
     } catch (err: any) {
@@ -117,14 +118,15 @@ export default function App() {
     efficientGrading: boolean = false,
     verifyPass: boolean = false,
     kind: ComparisonKind = "remake",
-    analyzerNotes: string | null = null
+    analyzerNotes: string | null = null,
+    antiSycophancy: boolean = false
   ) => {
     setIsLoading(true);
     setError(null);
     setComparisonResult(null);
 
     try {
-      const cfg = { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass };
+      const cfg = { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass, antiSycophancy };
       // Exactly one request per run: the selected type decides which prompt is sent.
       if (kind === "premise") {
         setComparisonResult({ kind, data: await runPremise({ cardADescription: originalDescription, cardBDescription: remakeDescription, analyzerNotes }, cfg) });
@@ -151,7 +153,8 @@ export default function App() {
     maxOutputTokens: number = 32768,
     efficientGrading: boolean = false,
     verifyPass: boolean = false,
-    analyzerNotes: string | null = null
+    analyzerNotes: string | null = null,
+    antiSycophancy: boolean = false
   ) => {
     setIsLoading(true);
     setError(null);
@@ -160,7 +163,7 @@ export default function App() {
     try {
       const result = await runGroup(
         { characters, analyzerNotes },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass, antiSycophancy }
       );
       setGroupResult(result);
     } catch (err: any) {
@@ -185,7 +188,8 @@ export default function App() {
     modules: ImmersionModuleId[] = [],
     maxOutputTokens: number = 32768,
     efficientGrading: boolean = false,
-    verifyPass: boolean = false
+    verifyPass: boolean = false,
+    antiSycophancy: boolean = false
   ) => {
     setIsLoading(true);
     setError(null);
@@ -194,7 +198,7 @@ export default function App() {
     try {
       const result = await runMultichar(
         { description, analyzerNotes },
-        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass }
+        { provider, apiKey: customApiKey || "", model: selectedModel, customBaseUrl, thinkingMode, reasoningEffort, modules, maxOutputTokens, efficientGrading, verifyPass, antiSycophancy }
       );
       setMultiCharResult(result);
     } catch (err: any) {

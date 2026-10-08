@@ -28,6 +28,8 @@ export interface RunnerConfig {
   maxOutputTokens?: number;
   // "Token-Efficient Grading": send the condensed rubric instead of the full one.
   efficientGrading?: boolean;
+  // Append the optional anti-sycophancy rule as the final grading instructions.
+  antiSycophancy?: boolean;
   // "Evidence Verification": after the report comes back, fact-check its prose
   // claims against the card in a second call and correct unsupported ones.
   // Off means no second request is made at all.
@@ -44,7 +46,7 @@ interface ImagePart {
 // The system prompt is assembled per request so it only demands the immersion
 // modules the user actually enabled.
 function systemContent(endpoint: EndpointType, cfg: RunnerConfig): string {
-  return buildPrompt(endpoint, cfg.modules ?? [], cfg.efficientGrading ?? false);
+  return buildPrompt(endpoint, cfg.modules ?? [], cfg.efficientGrading ?? false, cfg.antiSycophancy ?? false);
 }
 
 function providerLabel(provider: string): string {

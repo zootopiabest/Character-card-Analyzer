@@ -393,8 +393,10 @@ test('verification sends a second rubric-free call and patches only the named cl
 });
 
 test('a clean verification reports every claim supported and changes nothing', async () => {
-  scripted(JSON.stringify(verifiable()), JSON.stringify({ fixes: [] }));
-  const result = await runAnalyze(params, { ...cfg, verifyPass: true });
+  const calls = scripted(JSON.stringify(verifiable()), JSON.stringify({ fixes: [] }));
+  const result = await runAnalyze(params, { ...cfg, verifyPass: true, antiSycophancy: true });
+  assert.match(calls[0].messages[0].content, /FINAL INSTRUCTIONS — ANTI-SYCOPHANCY/);
+  assert.doesNotMatch(calls[1].messages[0].content, /FINAL INSTRUCTIONS — ANTI-SYCOPHANCY|You are known to be a sycophant/);
   assert.equal(result.verification.status, 'clean');
   assert.equal(result.verification.corrected, 0);
   assert.ok(result.verification.checked > 5);
@@ -633,6 +635,33 @@ test('OOC analyzer notes reach the model in every mode, and an empty box adds no
       assert.equal(text.includes('OOC/ANALYZER NOTES'), present, `${run} notes=${JSON.stringify(notes)}`);
       if (present) assert.match(text, /PARODY_ON_PURPOSE/);
     }
+  }
+});
+test('anti-sycophancy is optional and reaches every grading request as the final instructions', async () => {
+  const rule = "You are known to be a sycophant. DO not be. If this card sucks, then say it sucks. If it is just okay, say it is just okay. You don't have to be nice because you're afraid of upsetting anyone. Don't call a card good just because you want someone happy. Reserve high scores for cards that are actually good. Don't invent positives for positives sake. Do not be a sycophant.";
+  const suffix = '\n\nFINAL INSTRUCTIONS — ANTI-SYCOPHANCY:\n' + rule;
+  const runners = [
+    ['analyze', good(), c => runAnalyze(params, c)],
+    ['compare', { original: good(), remake: good(), comparison: { verdictScorecard: { originalScore: 7, remakeScore: 7 } } }, c => runCompare({ originalDescription: 'A', remakeDescription: 'B' }, c)],
+    ['premise', premiseReport(), c => runPremise({ cardADescription: 'A', cardBDescription: 'B' }, c)],
+    ['group', { groupSlopScore: 5, criticalAssessment: 'Compatible.', synergyAnalysis: {}, characterBreakdowns: [{ name: 'A' }], groupScenarios: {} }, c => runGroup({ characters: [{ name: 'A', description: 'A' }] }, c)],
+    ['multichar', { overallSlopScore: 5, criticalAssessment: 'Coherent world.', worldAndSystemAnalysis: { worldBuilding: { score: 8 }, systemRulesAdherence: { score: 8 } }, characterAssessments: [], playScenarios: {} }, c => runMultichar({ description: 'World' }, c)],
+  ];
+  for (const [endpoint, report, run] of runners) for (const efficientGrading of [false, true]) {
+    const c = { ...cfg, efficientGrading, modules: ['boringTuesday'] };
+    const prompts = [];
+    globalThis.fetch = async (_url, options) => {
+      prompts.push(JSON.parse(options.body).messages[0].content);
+      return chat(JSON.stringify(report));
+    };
+    await run(c);
+    await run({ ...c, antiSycophancy: false });
+    await run({ ...c, antiSycophancy: true });
+    assert.equal(prompts.length, 3);
+    assert.equal(prompts[0], buildPrompt(endpoint, c.modules, efficientGrading));
+    assert.equal(prompts[1], prompts[0]);
+    assert.equal(prompts[2], prompts[0] + suffix, `${endpoint} efficient=${efficientGrading}`);
+    assert.ok(prompts[2].indexOf('JSON SCHEMA:') < prompts[2].indexOf('FINAL INSTRUCTIONS — ANTI-SYCOPHANCY:'));
   }
 });
 test('both rubrics credit body traits that drive behavior and protect role-flexible relationships', () => {

@@ -50,12 +50,15 @@ export function useModelSettings() {
   const [reasoningEffort, setReasoningEffort] = usePersisted("loresieve_reasoning_effort", "medium");
   const [efficientRaw, setEfficientRaw] = usePersisted("loresieve_efficient_grading", "false");
   const [verifyRaw, setVerifyRaw] = usePersisted("loresieve_verify_pass", "false");
+  const [antiSycophancyRaw, setAntiSycophancyRaw] = usePersisted("loresieve_anti_sycophancy", "false");
 
   return {
     efficientGrading: efficientRaw === "true",
     setEfficientGrading: (v: boolean) => setEfficientRaw(v ? "true" : "false"),
     verifyPass: verifyRaw === "true",
     setVerifyPass: (v: boolean) => setVerifyRaw(v ? "true" : "false"),
+    antiSycophancy: antiSycophancyRaw === "true",
+    setAntiSycophancy: (v: boolean) => setAntiSycophancyRaw(v ? "true" : "false"),
     outputLimit: Number(outputLimit),
     setOutputLimit: (value: number) => setOutputLimit(String(value)),
     provider,
@@ -421,6 +424,30 @@ export default function ModelSettingsPanel({ s }: { s: ModelSettings }) {
             </div>
             <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">
               Sends the condensed rubric — about half the prompt tokens. Same grading standards, less worked explanation for the model to lean on. Good for cheap or small models; the full rubric gives strong models more to reason with.
+            </p>
+          </div>
+
+          {/* Anti-sycophancy */}
+          <div className="space-y-2 pt-3 border-t border-[#1A1A1A]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label htmlFor="anti-sycophancy" className="text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase flex items-center gap-2 cursor-pointer">
+                <span className="w-1.5 h-1.5 bg-[#FACC15] rounded-full inline-block"></span>
+                Anti-sycophancy
+              </label>
+              <label className="relative inline-flex items-center cursor-pointer select-none">
+                <input
+                  id="anti-sycophancy"
+                  type="checkbox"
+                  checked={s.antiSycophancy}
+                  onChange={(e) => s.setAntiSycophancy(e.target.checked)}
+                  aria-describedby="anti-sycophancy-description"
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-[#1A1A1A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-600 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FACC15]/30 peer-checked:after:bg-[#FACC15] peer-checked:after:border-transparent"></div>
+              </label>
+            </div>
+            <p id="anti-sycophancy-description" className="text-[9px] text-zinc-500 font-mono leading-relaxed">
+              Adds a final reminder to judge honestly, avoid invented positives, and reserve high scores for genuinely good cards. Off by default; your choice is saved across modes.
             </p>
           </div>
 

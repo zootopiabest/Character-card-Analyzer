@@ -19,7 +19,8 @@ interface GroupInputProps {
     maxOutputTokens?: number,
     efficientGrading?: boolean,
     verifyPass?: boolean,
-    analyzerNotes?: string | null
+    analyzerNotes?: string | null,
+    antiSycophancy?: boolean
   ) => void;
   isLoading: boolean;
 }
@@ -114,7 +115,8 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
       settings.outputLimit,
       settings.efficientGrading,
       settings.verifyPass,
-      analyzerNotes.trim() ? analyzerNotes : null
+      analyzerNotes.trim() ? analyzerNotes : null,
+      settings.antiSycophancy
     );
   };
 

@@ -604,8 +604,8 @@ test('premise prompts in both rubrics carry no remake-only rules, and the full o
     const prompt = buildPrompt('premise', [], efficient);
     for (const remakeOnly of [/point of a remake/i, /ephemeral/i, /whatImproved|whatRegressed/]) assert.doesNotMatch(prompt, remakeOnly, `efficient=${efficient}`);
     assert.match(prompt, /2-4 sharp sentences/, `efficient=${efficient}`);
+    assert.match(prompt, /without flattery or manufactured criticism/, `efficient=${efficient}`);
   }
-  assert.match(buildPrompt('premise', [], false), /DO NOT BE A SYCOPHANT/);
 });
 test('OOC analyzer notes reach the model in every mode, and an empty box adds nothing', async () => {
   const groupReport = { groupSlopScore: 5, criticalAssessment: 'Compatible.', synergyAnalysis: {}, characterBreakdowns: [{ name: 'A' }], groupScenarios: {} };

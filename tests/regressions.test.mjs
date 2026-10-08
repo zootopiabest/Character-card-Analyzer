@@ -48,6 +48,32 @@ test('token-efficient grading sends a much smaller prompt with the same schema, 
   await runAnalyze(params, {...cfg, efficientGrading: true});
   assert.ok(body.messages[0].content.length < fullLength * 0.7);
 });
+test('all grading modes share graduated, genre-neutral characterization standards', () => {
+  // Verify assembled prompts, including the condensed path. These checks guard
+  // delivery of the standard; mocked-provider tests cannot prove model grades.
+  let qualityStandard;
+  let scoreStandard;
+  for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
+    const prompt = buildPrompt(endpoint, [], efficient);
+    const where = `${endpoint} efficient=${efficient}`;
+    const quality = prompt.match(/CHARACTER QUALITY, INCLUDING SEXUAL CARDS:\n[\s\S]*?number of details\./g);
+    const scoring = prompt.match(/SCORING DISCIPLINE:\n[\s\S]*?every kind of slop\./g);
+    assert.equal(quality?.length, 1, where);
+    assert.equal(scoring?.length, 1, where);
+    qualityStandard ??= quality[0];
+    scoreStandard ??= scoring[0];
+    assert.equal(quality[0], qualityStandard, where);
+    assert.equal(scoring[0], scoreStandard, where);
+    for (const rule of [/A goon card can be excellent; a nonsexual card can be mediocre or bad/,
+      /before identity disappears entirely/, /Do not strip out sexuality/,
+      /not word-count percentages/, /credit the specific characterization/i,
+      /not a whole persona supplied by the archetype/, /most consequential evidenced construction weakness/,
+      /5 serviceable or mediocre/, /High Cohesion can coexist with poor characterization/]) {
+      assert.match(prompt, rule, where);
+    }
+    assert.doesNotMatch(prompt, /Penalize only when the character functionally ceases to exist|never call its text "crowding out"|replace nearly all concrete characterization|erotically dominant/, where);
+  }
+});
 test('both rubrics never penalize a character for being powerful', () => {
   // The user can strip any power with one reply, so "omnipotent in combat",
   // "removes tension", or "no failure state" is never a valid deduction.
@@ -699,8 +725,10 @@ test('both rubrics credit body traits that drive behavior and protect role-flexi
   for (const endpoint of ['analyze','compare','premise','group','multichar']) for (const efficient of [false, true]) {
     const prompt = buildPrompt(endpoint, [], efficient);
     const where = `${endpoint} efficient=${efficient}`;
-    // A physical trait that shapes backstory, wardrobe, or mannerisms is characterization.
-    assert.match(prompt, /drives? (the character|backstory)/, where);
+    // Body-linked characterization counts for its actual contribution, without
+    // turning every physical consequence into proof of a distinctive person.
+    assert.match(prompt, /credit the specific characterization/i, where);
+    assert.match(prompt, /clothing constraint/i, where);
     assert.match(prompt, /crowding out/, where);
     // Greetings that cast {{user}} in different roles keep the profile relationship open on purpose.
     assert.match(prompt, /cast \{\{user\}\} in different roles/, where);

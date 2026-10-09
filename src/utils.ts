@@ -1,7 +1,31 @@
+import { CARD_FILE_LIMIT, CHARX_FILE_LIMIT, readCharx } from "./charx";
+
+function isRecord(value: any): value is Record<string, any> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasValue(value: any): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return !!value.trim();
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return true; // false and zero can be meaningful settings.
+}
+
+function settingsText(record: Record<string, any>, keys: string[]): string {
+  return keys.filter(key => hasValue(record[key])).map(key =>
+    `${key}: ${typeof record[key] === "string" ? record[key] : JSON.stringify(record[key])}`
+  ).join("\n");
+}
+
 export function buildDescriptionFromJson(data: any): { name?: string; description?: string } {
-  const charObj = data.data || data;
+  if (!isRecord(data)) throw new Error("Character card must be a JSON object.");
+  const charObj = data.data ?? data;
+  if (!isRecord(charObj)) throw new Error("Character card data must be a JSON object.");
   let accumulatedDesc = "";
-  let name = charObj.name || "";
+  const name = typeof charObj.name === "string" ? charObj.name : "";
+  if (typeof charObj.nickname === "string" && charObj.nickname.trim()) {
+    accumulatedDesc += `[Character Nickname / {{char}} Replacement]\n${charObj.nickname}\n\n`;
+  }
   
   if (charObj.description) accumulatedDesc += `[Description]\n${charObj.description}\n\n`;
   if (charObj.personality) accumulatedDesc += `[Personality]\n${charObj.personality}\n\n`;
@@ -20,10 +44,20 @@ export function buildDescriptionFromJson(data: any): { name?: string; descriptio
     });
   }
 
+  if (Array.isArray(charObj.group_only_greetings)) {
+    const greetings = charObj.group_only_greetings.filter((message: any) => typeof message === "string" && message.trim());
+    if (greetings.length) accumulatedDesc += `[Group-Only Greetings]\n${greetings.map((message: string, i: number) => `Group Greeting #${i + 1}:\n${message.trim()}`).join("\n\n")}\n\n`;
+  }
+
   if (charObj.mes_example) accumulatedDesc += `[Example Messages]\n${charObj.mes_example}\n\n`;
 
   if (charObj.system_prompt) accumulatedDesc += `[System Prompt]\n${charObj.system_prompt}\n\n`;
   if (charObj.creator_notes) accumulatedDesc += `[Creator Notes]\n${charObj.creator_notes}\n\n`;
+  if (isRecord(charObj.creator_notes_multilingual)) {
+    const notes = Object.entries(charObj.creator_notes_multilingual)
+      .filter(([, value]) => typeof value === "string" && value.trim() && value !== charObj.creator_notes);
+    if (notes.length) accumulatedDesc += `[Multilingual Creator Notes — Metadata]\n${notes.map(([language, value]) => `${language}:\n${value}`).join("\n\n")}\n\n`;
+  }
   if (charObj.creatorcomment) accumulatedDesc += `[Creator Comment]\n${charObj.creatorcomment}\n\n`;
   if (charObj.post_history_instructions) accumulatedDesc += `[Post History Instructions]\n${charObj.post_history_instructions}\n\n`;
   if (charObj.author_note) accumulatedDesc += `[Author Note]\n${charObj.author_note}\n\n`;
@@ -33,12 +67,15 @@ export function buildDescriptionFromJson(data: any): { name?: string; descriptio
   if (charObj.character_version) accumulatedDesc += `[Character Version]\n${charObj.character_version}\n\n`;
 
   const characterBook = charObj.character_book || charObj.lorebook || data.character_book || data.lorebook;
-  if (characterBook && typeof characterBook === "object") {
+  if (isRecord(characterBook)) {
+    const settings = settingsText(characterBook, ["scan_depth", "token_budget", "recursive_scanning", "extensions"]);
+    if (settings) accumulatedDesc += `[Lorebook Settings]\n${settings}\n\n`;
     const bookEntries = characterBook.entries || characterBook.lorebook_entries || [];
     if (Array.isArray(bookEntries) && bookEntries.length > 0) {
       const bookNameStr = characterBook.name ? ` "${characterBook.name}"` : "";
       accumulatedDesc += `[Embedded Lorebook / World Info${bookNameStr}]\n`;
       bookEntries.forEach((entry: any, i: number) => {
+        if (!isRecord(entry)) return;
         let keysStr = Array.isArray(entry.keys)
           ? entry.keys.join(", ")
           : (typeof entry.key === "string" ? entry.key : (typeof entry.keys === "string" ? entry.keys : "No Keys"));
@@ -60,7 +97,8 @@ export function buildDescriptionFromJson(data: any): { name?: string; descriptio
         const content = entry.content || entry.entry || "";
         const comment = entry.name || entry.comment ? ` (${entry.name || entry.comment})` : "";
         if (content && typeof content === "string" && content.trim()) {
-          accumulatedDesc += `Entry #${i + 1}${comment} ${status}${triggerInfo}:\n${content.trim()}\n\n`;
+          const settings = settingsText(entry, ["use_regex", "case_sensitive", "selective", "insertion_order", "priority", "position", "extensions"]);
+          accumulatedDesc += `Entry #${i + 1}${comment} ${status}${triggerInfo}:\n${settings ? `Settings:\n${settings}\nContent:\n` : ""}${content.trim()}\n\n`;
         }
       });
     }
@@ -81,7 +119,7 @@ export function buildDescriptionFromJson(data: any): { name?: string; descriptio
           if (dp.role !== undefined) extDesc += `Role: ${dp.role}\n`;
           extDesc += `\n`;
         }
-      } else if (extVal && (typeof extVal === "string" ? extVal.trim() !== "" : (Array.isArray(extVal) ? extVal.length > 0 : Object.keys(extVal).length > 0))) {
+      } else if (hasValue(extVal)) {
          hasExtData = true;
          const valStr = typeof extVal === "string" ? extVal : JSON.stringify(extVal, null, 2);
          extDesc += `--- Extension: ${extKey} ---\n${valStr}\n\n`;
@@ -89,12 +127,25 @@ export function buildDescriptionFromJson(data: any): { name?: string; descriptio
     }
     if (hasExtData) accumulatedDesc += extDesc;
   }
+
+  // Asset bytes/URLs are packaging, never character prose or model image input.
+  if (Array.isArray(charObj.assets) && charObj.assets.length) {
+    const counts = new Map<string, number>();
+    for (const asset of charObj.assets) {
+      const type = typeof asset?.type === "string" ? asset.type : "other";
+      counts.set(type, (counts.get(type) || 0) + 1);
+    }
+    accumulatedDesc += `[Asset Inventory — Metadata Only]\n${[...counts].map(([type, count]) => `${type}: ${count}`).join("\n")}\nAsset presence is not evidence of visual content; only separately attached artwork is available for visual inspection.\n\n`;
+  }
+  const metadata = settingsText(charObj, ["source", "creation_date", "modification_date"]);
+  if (metadata) accumulatedDesc += `[Card Metadata — Not Runtime Instructions]\n${metadata}\n\n`;
   
   // Extract remaining fields
   const handledKeys = [
     "name", "description", "personality", "scenario", "first_mes", "alternate_greetings", 
     "mes_example", "system_prompt", "creator_notes", "creatorcomment", "post_history_instructions", 
-    "author_note", "tags", "creator", "character_version", "character_book", "lorebook", "extensions"
+    "author_note", "tags", "creator", "character_version", "character_book", "lorebook", "extensions",
+    "nickname", "group_only_greetings", "creator_notes_multilingual", "assets", "source", "creation_date", "modification_date"
   ];
   
   const unhandledKeys = Object.keys(charObj).filter(k => !handledKeys.includes(k));
@@ -103,7 +154,7 @@ export function buildDescriptionFromJson(data: any): { name?: string; descriptio
      let unhandledDesc = "[Other Fields]\n";
      unhandledKeys.forEach(k => {
        const v = charObj[k];
-       if (v && (typeof v === "string" ? v.trim() !== "" : (Array.isArray(v) ? v.length > 0 : Object.keys(v).length > 0))) {
+       if (hasValue(v)) {
           hasUnhandledData = true;
           unhandledDesc += `--- ${k} ---\n${typeof v === "string" ? v : JSON.stringify(v, null, 2)}\n\n`;
        }
@@ -115,7 +166,7 @@ export function buildDescriptionFromJson(data: any): { name?: string; descriptio
 
   return {
     name: name,
-    description: accumulatedDesc.trim() || JSON.stringify(charObj, null, 2)
+    description: accumulatedDesc.trim() || (name ? `[Name]\n${name}` : "[Empty Character Card]")
   };
 }
 
@@ -202,22 +253,34 @@ export interface CardFileCallbacks {
   onText?: (r: {
     text: string;
     name?: string;
-    source: "json" | "text" | "docx" | "png-embedded";
+    source: "json" | "text" | "docx" | "png-embedded" | "charx";
   }) => void;
   // Fired for image files with the preview/data payload.
   onImage?: (r: { dataUrl: string; base64: string; mimeType: string }) => void;
   onError?: (message: string) => void;
+  onWarning?: (message: string) => void;
 }
 
 export function readCardFile(file: File, cb: CardFileCallbacks): void {
   if (!file) return;
 
-  if (file.size > 15 * 1024 * 1024) {
-    cb.onError?.("File size exceeds 15MB limit. Please attach a smaller file.");
+  const lower = file.name.toLowerCase();
+  const isCharx = lower.endsWith(".charx");
+  if (file.size > (isCharx ? CHARX_FILE_LIMIT : CARD_FILE_LIMIT)) {
+    cb.onError?.(`File size exceeds ${isCharx ? "100MB CharX" : "15MB"} limit. Please attach a smaller file.`);
     return;
   }
 
-  const lower = file.name.toLowerCase();
+  if (isCharx) {
+    void file.arrayBuffer().then(readCharx).then(({ card, image, warning }) => {
+      const extracted = buildDescriptionFromJson(card);
+      // Clear old artwork via onText before setting this archive's portrait.
+      cb.onText?.({ text: extracted.description || "", name: extracted.name, source: "charx" });
+      if (image) cb.onImage?.(image);
+      if (warning) cb.onWarning?.(warning);
+    }).catch(error => cb.onError?.(error instanceof Error ? error.message : "Failed to read CharX archive."));
+    return;
+  }
 
   if (file.type === "application/json" || lower.endsWith(".json")) {
     const reader = new FileReader();

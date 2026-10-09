@@ -71,11 +71,11 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
     readCardFile(file, {
       onText: ({ text, name, source }) => {
         setDescription(text);
-        if (source === "json" || source === "png-embedded") {
-          // JSON cards carry no image; embedded PNG cards keep their own art.
-          if (source === "json") clearImageState();
+        if (source === "json" || source === "png-embedded" || source === "charx") {
+          // CharX delivers its portrait after the text; clear any previous art first.
+          if (source !== "png-embedded") clearImageState();
           const extractedNameVal =
-            name || (source === "json" ? "JSON Character" : "Embedded Tavern Character");
+            name || "Imported Character";
           setExtractedName(extractedNameVal);
           onNameExtracted?.(extractedNameVal);
           setShowExtractedBanner(true);
@@ -93,6 +93,7 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
         setImageMimeType(mimeType);
       },
       onError: (msg) => alert(msg),
+      onWarning: (msg) => alert(msg),
     });
   };
 
@@ -158,7 +159,7 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
         {/* File Dropzone Panel */}
         <div>
           <label className="block text-[10px] font-mono font-bold tracking-wider text-[#555] uppercase mb-2">
-            Character Poster Art / Card PNG / JSON (Optional)
+            Character Art / PNG / JSON / CharX (Optional)
           </label>
 
           <div
@@ -178,7 +179,7 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,application/json,.json,.txt,.md,.rtf,.docx,.doc"
+              accept="image/*,application/json,.json,.charx,.txt,.md,.rtf,.docx,.doc"
               className="hidden"
               onChange={handleFileChange}
             />
@@ -228,7 +229,7 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
                     Drop a card or click to attach
                   </p>
                   <p className="text-[9px] text-[#555] font-mono mt-1">
-                    Accepts PNG/JPG illustration or standard V2/SillyTavern PNG card
+                    Accepts artwork, V2/V3 PNG or JSON cards, and CharX bundles
                   </p>
                 </div>
               </div>
@@ -240,9 +241,9 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
             <div id="metadata-extracted-alert" className="mt-3 flex items-start gap-2.5 bg-[#0A0A0A] border border-[#00F0FF]/25 p-3 rounded-lg text-cyan-200">
               <Sparkles size={14} className="text-[#00F0FF] flex-shrink-0 mt-0.5" />
               <div className="min-w-0 text-[11px] space-y-0.5 [overflow-wrap:anywhere]">
-                <span className="font-bold text-[#00F0FF] font-mono uppercase text-[10px]">Tavern Metadata Extracted!</span>
+                <span className="font-bold text-[#00F0FF] font-mono uppercase text-[10px]">Character Data Imported!</span>
                 <p className="opacity-90 leading-relaxed font-sans text-zinc-300">
-                  Found integrated character data for <strong className="text-white font-mono">&ldquo;{extractedName}&rdquo;</strong> inside PNG chunks. All greetings and lorebook entries loaded under the hood.
+                  Found integrated character data for <strong className="text-white font-mono">&ldquo;{extractedName}&rdquo;</strong>. Available greetings and embedded lorebook entries loaded.
                 </p>
               </div>
             </div>
@@ -269,7 +270,7 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
             <div className="p-4 border-t border-[#1A1A1A] space-y-3 animate-fadeIn">
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-mono text-[#555] uppercase font-bold">
-                  Paste or modify instructions manually below if not using a PNG card
+                  Paste or modify instructions manually below if not uploading a card
                 </span>
                 {description.length > 0 && (
                   <span className="text-[10px] font-mono text-[#555]">

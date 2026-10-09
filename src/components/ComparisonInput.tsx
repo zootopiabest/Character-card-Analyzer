@@ -103,7 +103,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
           setImgMimeType(null);
           setExtractedName(name || null);
         }
-        if (source === "json" || source === "png-embedded") {
+        if (source === "json" || source === "png-embedded" || source === "charx") {
           setExtractedName(name || (isOriginal ? `${leftLabel} Character` : `${rightLabel} Character`));
         }
       },
@@ -113,6 +113,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
         setImgMimeType(mimeType);
       },
       onError: (msg) => alert(msg),
+      onWarning: (msg) => alert(msg),
     });
   };
 
@@ -246,7 +247,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <input
               ref={origInputRef}
               type="file"
-              accept="image/*,application/json,.json,.txt,.md,.rtf,.docx,.doc"
+              accept="image/*,application/json,.json,.charx,.txt,.md,.rtf,.docx,.doc"
               className="hidden"
               onChange={handleOrigChange}
             />
@@ -278,10 +279,10 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
               <div className="space-y-1 py-3 text-center">
                 <Upload size={20} className="text-zinc-600 mx-auto" />
                 <p className="text-[10px] font-mono text-zinc-400">
-                  Drag & Drop <span className="text-red-500 font-bold">{leftLabel} PNG</span> card
+                  Drag & Drop <span className="text-red-500 font-bold">{leftLabel}</span> card
                 </p>
                 <p className="text-[8px] font-mono text-zinc-600">
-                  Or click to open file browser (PNG embedded chunks supported)
+                  Or browse files — V2/V3 PNG, JSON, and CharX supported
                 </p>
               </div>
             )}
@@ -301,7 +302,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <textarea
               value={origDesc}
               onChange={(e) => setOrigDesc(e.target.value)}
-              placeholder={`Paste the ${leftLabel} character prompt description here if you didn't upload a metadata-configured PNG or JSON file...`}
+              placeholder={`Paste the ${leftLabel} character prompt description here if you didn't upload a PNG, JSON, or CharX card...`}
               rows={5}
               className="w-full text-[11px] font-mono bg-black text-zinc-300 p-3 rounded-lg border border-[#222] focus:border-red-500 focus:outline-none placeholder-zinc-700 resize-y"
             />
@@ -360,7 +361,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <input
               ref={remakeInputRef}
               type="file"
-              accept="image/*,application/json,.json,.txt,.md,.rtf,.docx,.doc"
+              accept="image/*,application/json,.json,.charx,.txt,.md,.rtf,.docx,.doc"
               className="hidden"
               onChange={handleRemakeChange}
             />
@@ -392,10 +393,10 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
               <div className="space-y-1 py-3 text-center">
                 <Upload size={20} className="text-zinc-600 mx-auto" />
                 <p className="text-[10px] font-mono text-zinc-400">
-                  Drag & Drop <span className="text-cyan-400 font-bold">{rightLabel} PNG</span> card
+                  Drag & Drop <span className="text-cyan-400 font-bold">{rightLabel}</span> card
                 </p>
                 <p className="text-[8px] font-mono text-zinc-600">
-                  Or click to open file browser (PNG embedded chunks supported)
+                  Or browse files — V2/V3 PNG, JSON, and CharX supported
                 </p>
               </div>
             )}
@@ -415,7 +416,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <textarea
               value={remakeDesc}
               onChange={(e) => setRemakeDesc(e.target.value)}
-              placeholder={`Paste the ${rightLabel} character prompt description here if you didn't upload a metadata-configured PNG or JSON file...`}
+              placeholder={`Paste the ${rightLabel} character prompt description here if you didn't upload a PNG, JSON, or CharX card...`}
               rows={5}
               className="w-full text-[11px] font-mono bg-black text-zinc-300 p-3 rounded-lg border border-[#222] focus:border-cyan-400 focus:outline-none placeholder-zinc-700 resize-y"
             />

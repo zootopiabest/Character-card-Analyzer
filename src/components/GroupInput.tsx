@@ -73,8 +73,9 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
               ? {
                   ...m,
                   description: text,
+                  previewUrl: source === "png-embedded" ? m.previewUrl : null,
                   name:
-                    source === "json" || source === "png-embedded"
+                    source === "json" || source === "png-embedded" || source === "charx"
                       ? name || m.name || "Embedded Character"
                       : m.name,
                 }
@@ -88,6 +89,7 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
         );
       },
       onError: (msg) => alert(msg),
+      onWarning: (msg) => alert(msg),
     });
   };
 
@@ -184,7 +186,7 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
                 <Upload size={11} /> Upload card file
                 <input
                   type="file"
-                  accept="image/*,application/json,.json,.txt,.md,.rtf,.docx,.doc"
+                  accept="image/*,application/json,.json,.charx,.txt,.md,.rtf,.docx,.doc"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];

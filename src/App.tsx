@@ -396,7 +396,7 @@ export default function App() {
                       </div>
                       <h3 className="text-xs font-bold uppercase tracking-widest text-[#888]">No active diagnostics loaded</h3>
                       <p className="text-[11px] text-zinc-500 max-w-sm mt-2 leading-relaxed">
-                        Drop or select your SillyTavern character card PNG file, or open the manual text input editor to paste prompt instructions, then run the AI character audit.
+                        Drop or select your V2/V3 PNG, JSON, or CharX character card, or open the manual text input editor to paste prompt instructions, then run the AI character audit.
                       </p>
                     </motion.div>
                   )}

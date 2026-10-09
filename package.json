@@ -1,7 +1,7 @@
 {
   "name": "character-card-analyzer",
   "private": true,
-  "version": "4.6.5",
+  "version": "4.6.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,7 +20,8 @@
     "mammoth": "^1.12.0",
     "motion": "^12.23.24",
     "react": "^19.0.1",
-    "react-dom": "^19.0.1"
+    "react-dom": "^19.0.1",
+    "jszip": "3.10.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",

@@ -112,8 +112,31 @@ settings. Turning customization off restores the provider default, which may
 still include thinking.
 
 Empty, refused, truncated, or invalid reports produce errors. Missing grades are
-never replaced with invented scores. PNG imports support Unicode card data in
-text and compressed metadata chunks, including v3 cards.
+never replaced with invented scores.
+
+## Character card imports
+
+All input modes accept V1/V2/V3 JSON and embedded PNG cards, plus `.charx`
+bundles. PNG imports support Unicode and compressed metadata; V3 takes
+precedence when both V2 and V3 payloads are present, with a readable V2 fallback
+when V3 metadata cannot be decoded.
+
+V3 imports label nicknames, group-only greetings, multilingual creator notes,
+and source/date metadata. Embedded lorebook settings (including regex flags,
+activation settings, and extensions) remain visible to the analyzer. These
+settings are inspected as text; the app does not execute frontend scripts or
+simulate lorebook activation.
+
+CharX imports read the root `card.json` and the declared main icon (or first
+icon when no main is declared). PNG, JPEG, WebP, and GIF portraits are supported.
+Other bundled assets stay out of the AI request; only an asset-count summary
+is included. Remote portraits are not fetched automatically. Missing or
+unsupported portraits produce a notice while still importing the card text;
+you can attach artwork separately. JSON imports remain text-only.
+
+CharX uploads may be up to 100MB. Extracted card text and the selected portrait
+are each limited to 15MB; ordinary uploads retain the 15MB limit. Unused assets
+are not decompressed. No export/conversion functionality is added.
 
 ## Token-Efficient Grading
 

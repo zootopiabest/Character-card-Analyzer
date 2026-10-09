@@ -163,3 +163,40 @@ test('shared reader exposes portrait notices and rejects oversize uploads before
     assert.match(error, limit);
   }
 });
+
+test('Wyvern .charx.zip downloads load usable card text and real artwork, not ZIP bytes as an image', async () => {
+  const buffer = await archive(v3({ name: 'Tiffany Cheesecake', assets: [icon('embeded://portrait.png')] }), { 'portrait.png': portrait });
+  for (const [name, type] of [
+    ['[WyvernChat] Tiffany Cheesecake.charx.zip', 'application/zip'],
+    ['[WYVERNCHAT] TIFFANY CHEESECAKE.CHARX.ZIP', ''],
+    ['Tiffany.charx.zip', 'application/octet-stream'],
+    ['Tiffany.zip', 'application/x-zip-compressed'],
+    ['Tiffany', 'application/zip'],
+  ]) {
+    const events = [];
+    await new Promise((resolve, reject) => readCardFile(new File([buffer], name, { type }), {
+      onText: value => events.push(['text', value]),
+      onImage: value => { events.push(['image', value]); resolve(); }, onError: reject,
+    }));
+    assert.deepEqual(events.map(([kind]) => kind), ['text', 'image']);
+    assert.ok(events[0][1].text.trim().length > 0, 'Start requires nonempty character text');
+    assert.equal(events[0][1].name, 'Tiffany Cheesecake');
+    assert.equal(events[1][1].mimeType, 'image/png');
+    assert.equal(events[1][1].base64, portrait.toString('base64'));
+  }
+});
+
+test('ordinary ZIPs without a card and unknown files report errors instead of attaching broken artwork', async () => {
+  const buffer = await archive(null, { 'notes.txt': 'Not a character card' });
+  let imageAttached = false;
+  const error = await new Promise(resolve => readCardFile(new File([buffer], 'ordinary.zip', { type: 'application/zip' }), {
+    onImage: () => { imageAttached = true; }, onError: resolve,
+  }));
+  assert.match(error, /missing card.json/);
+  let unknownError;
+  readCardFile(new File(['not an image'], 'unknown.bin'), {
+    onImage: () => { imageAttached = true; }, onError: message => { unknownError = message; },
+  });
+  assert.match(unknownError, /Unsupported file type/);
+  assert.equal(imageAttached, false);
+});

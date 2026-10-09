@@ -247,7 +247,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <input
               ref={origInputRef}
               type="file"
-              accept="image/*,application/json,.json,.charx,.txt,.md,.rtf,.docx,.doc"
+              accept="image/*,application/json,.json,.charx,.zip,application/zip,application/x-zip-compressed,.txt,.md,.rtf,.docx,.doc"
               className="hidden"
               onChange={handleOrigChange}
             />
@@ -361,7 +361,7 @@ export default function ComparisonInput({ onCompare, isLoading }: ComparisonInpu
             <input
               ref={remakeInputRef}
               type="file"
-              accept="image/*,application/json,.json,.charx,.txt,.md,.rtf,.docx,.doc"
+              accept="image/*,application/json,.json,.charx,.zip,application/zip,application/x-zip-compressed,.txt,.md,.rtf,.docx,.doc"
               className="hidden"
               onChange={handleRemakeChange}
             />

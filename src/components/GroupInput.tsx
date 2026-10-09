@@ -186,7 +186,7 @@ export default function GroupInput({ onAnalyze, isLoading }: GroupInputProps) {
                 <Upload size={11} /> Upload card file
                 <input
                   type="file"
-                  accept="image/*,application/json,.json,.charx,.txt,.md,.rtf,.docx,.doc"
+                  accept="image/*,application/json,.json,.charx,.zip,application/zip,application/x-zip-compressed,.txt,.md,.rtf,.docx,.doc"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];

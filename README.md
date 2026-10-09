@@ -117,7 +117,8 @@ never replaced with invented scores.
 ## Character card imports
 
 All input modes accept V1/V2/V3 JSON and embedded PNG cards, plus `.charx`
-bundles. PNG imports support Unicode and compressed metadata; V3 takes
+bundles, including downloads named `.charx.zip` or `.zip` (with a V3
+`card.json` at the archive root). PNG imports support Unicode and compressed metadata; V3 takes
 precedence when both V2 and V3 payloads are present, with a readable V2 fallback
 when V3 metadata cannot be decoded.
 

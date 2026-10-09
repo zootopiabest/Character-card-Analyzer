@@ -265,7 +265,10 @@ export function readCardFile(file: File, cb: CardFileCallbacks): void {
   if (!file) return;
 
   const lower = file.name.toLowerCase();
-  const isCharx = lower.endsWith(".charx");
+  // Downloads may acquire a .zip suffix because CharX is a ZIP container.
+  // Validate card.json inside the archive rather than trusting that suffix.
+  const isCharx = lower.endsWith(".charx") || lower.endsWith(".zip") ||
+    ["application/zip", "application/x-zip-compressed", "application/charx", "application/x-charx"].includes(file.type);
   if (file.size > (isCharx ? CHARX_FILE_LIMIT : CARD_FILE_LIMIT)) {
     cb.onError?.(`File size exceeds ${isCharx ? "100MB CharX" : "15MB"} limit. Please attach a smaller file.`);
     return;
@@ -328,7 +331,11 @@ export function readCardFile(file: File, cb: CardFileCallbacks): void {
     return;
   }
 
-  // Everything else is treated as an image.
+  // Unknown files must not masquerade as attached art with an empty card.
+  if (!file.type?.startsWith("image/") && !/\.(png|apng|jpe?g|webp|gif|bmp|avif|heic|heif|svg|ico|tiff?)$/.test(lower)) {
+    cb.onError?.("Unsupported file type. Choose a PNG, JSON, CharX/ZIP card, image, or text document.");
+    return;
+  }
   const reader = new FileReader();
   reader.onload = (e) => {
     const dataUrl = e.target?.result as string;

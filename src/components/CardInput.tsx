@@ -179,7 +179,7 @@ export default function CardInput({ onAnalyze, isLoading, onNameExtracted, suppo
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,application/json,.json,.charx,.txt,.md,.rtf,.docx,.doc"
+              accept="image/*,application/json,.json,.charx,.zip,application/zip,application/x-zip-compressed,.txt,.md,.rtf,.docx,.doc"
               className="hidden"
               onChange={handleFileChange}
             />
